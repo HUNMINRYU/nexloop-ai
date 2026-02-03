@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from services.naver_service import NaverService
+from services.youtube_service import YouTubeService
 from services.rag_ingestion_service import RagIngestionService
 from utils.logger import get_logger
 
@@ -15,9 +16,11 @@ class InsightExternalService:
     def __init__(
         self,
         naver_service: NaverService,
+        youtube_service: YouTubeService,
         rag_ingestion_service: RagIngestionService,
     ) -> None:
         self._naver = naver_service
+        self._youtube = youtube_service
         self._rag_ingestion = rag_ingestion_service
 
     def ingest_naver(
@@ -144,4 +147,73 @@ class InsightExternalService:
             "products": len(products),
             "blogs": len(blogs),
             "news": len(news),
+        }
+
+    def ingest_youtube(
+        self,
+        query: str,
+        max_results: int = 5,
+        include_comments: bool = True,
+        meta: dict[str, str | None] | None = None,
+        user: Any | None = None,
+    ) -> dict[str, int]:
+        safe_query = (query or "").strip()
+        if not safe_query:
+            return {"ingested": 0, "items": 0, "videos": 0}
+
+        meta = meta or {}
+        # collect_product_data expects a product dict with 'name'
+        try:
+            yt_data = self._youtube.collect_product_data(
+                {"name": safe_query},
+                max_results=max_results,
+                include_comments=include_comments
+            )
+        except Exception as exc:
+            logger.error(f"YouTube data collection failed: {exc}")
+            return {"ingested": 0, "items": 0, "videos": 0}
+
+        videos = yt_data.get("videos", [])
+        items: list[dict[str, Any]] = []
+
+        for video in videos:
+            title = video.get("title") or safe_query
+            # Basic video content
+            content_parts = [
+                f"Video Title: {title}",
+                f"Uploader: {video.get('uploader', 'N/A')}",
+                f"Description: {video.get('description', '')}",
+                f"Viedeo ID: {video.get('video_id', '')}",
+                f"Link: https://www.youtube.com/watch?v={video.get('video_id', '')}"
+            ]
+
+            # Add comments to content if available
+            comments = video.get("comments", [])
+            if comments:
+                content_parts.append("Key Comments:")
+                for c in comments[:10]: # Up to 10 comments
+                    content_parts.append(f"- {c.get('text', '')}")
+
+            content = "\n".join(content_parts).strip()
+
+            items.append(
+                {
+                    "title": title,
+                    "content": content,
+                    "doc_type": "social_trend",
+                    "source": "youtube",
+                    "campaign_name": meta.get("campaign_name"),
+                    "channel": meta.get("channel"),
+                    "region": meta.get("region"),
+                    "period_start": meta.get("period_start"),
+                    "period_end": meta.get("period_end"),
+                    "tags": [safe_query, "youtube", "video"],
+                }
+            )
+
+        ingested = self._rag_ingestion.ingest_manual_upload(items, user)
+        return {
+            "ingested": int(ingested),
+            "items": len(items),
+            "videos": len(videos),
         }

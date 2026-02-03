@@ -124,3 +124,42 @@ class PipelineSchedule(Base):
     )  # Soft delete
 
     creator = relationship("User", foreign_keys=[created_by])
+
+
+class UserProfileModel(Base):
+    """파이프라인 사용자 선호도 프로필"""
+
+    __tablename__ = "user_profiles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    product_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    preferences_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    topic_affinities_json: Mapped[str] = mapped_column(
+        Text, default="{}", nullable=False
+    )
+    interaction_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=now_kst,
+        onupdate=now_kst,
+        nullable=False,
+    )
+
+
+class CTRFeedback(Base):
+    """CTR 예측 vs 실제 성과 피드백"""
+
+    __tablename__ = "ctr_feedback"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    video_id: Mapped[str] = mapped_column(String(200), nullable=False)
+    predicted_ctr: Mapped[str] = mapped_column(String(20), nullable=False)
+    actual_ctr: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    error: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    model_version: Mapped[str] = mapped_column(
+        String(50), default="v1", nullable=False
+    )
+    metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=now_kst, nullable=False
+    )

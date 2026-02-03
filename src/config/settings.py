@@ -98,6 +98,36 @@ class NotionSettings(BaseSettings):
     )
 
 
+class PipelineSettings(BaseSettings):
+    """파이프라인 다양성/스코어링 설정"""
+
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
+
+    author_diversity_decay: float = Field(
+        default=0.7, validation_alias="PIPELINE_AUTHOR_DIVERSITY_DECAY"
+    )
+    author_diversity_floor: float = Field(
+        default=0.3, validation_alias="PIPELINE_AUTHOR_DIVERSITY_FLOOR"
+    )
+    topic_diversity_decay: float = Field(
+        default=0.8, validation_alias="PIPELINE_TOPIC_DIVERSITY_DECAY"
+    )
+    topic_diversity_floor: float = Field(
+        default=0.5, validation_alias="PIPELINE_TOPIC_DIVERSITY_FLOOR"
+    )
+    use_multi_diversity: bool = Field(
+        default=False, validation_alias="PIPELINE_USE_MULTI_DIVERSITY"
+    )
+    reranking_alpha: float = Field(
+        default=0.7, validation_alias="PIPELINE_RERANKING_ALPHA"
+    )
+    use_bloom_filter: bool = Field(
+        default=False, validation_alias="PIPELINE_USE_BLOOM_FILTER"
+    )
+
+
 class AppSettings(BaseSettings):
     """애플리케이션 전체 설정"""
 
@@ -146,6 +176,7 @@ class Settings:
         self.naver = NaverSettings()  # type: ignore[call-arg]
         self.notion = NotionSettings()
         self.models = AIModelSettings()
+        self.pipeline = PipelineSettings()
 
     @property
     def google_api_key(self) -> str:

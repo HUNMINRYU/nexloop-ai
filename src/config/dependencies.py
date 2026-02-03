@@ -331,6 +331,7 @@ class ServiceContainer:
     def insight_external_service(self) -> InsightExternalService:
         return InsightExternalService(
             naver_service=self.naver_service,
+            youtube_service=self.youtube_service,
             rag_ingestion_service=self.rag_ingestion_service,
         )
 

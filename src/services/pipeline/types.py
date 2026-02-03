@@ -37,6 +37,12 @@ class CandidateFeatures:
     not_interested: float = 0.0
     report_probability: float = 0.0
 
+    # 확장 시그널 (x-algorithm 19개 engagement prediction)
+    dm_probability: float = 0.0       # DM/문의 유도 가능성
+    copy_link_probability: float = 0.0  # 링크 공유 가능성
+    profile_click: float = 0.0        # 프로필 클릭 가능성
+    bookmark_worthy: float = 0.0      # 북마크 저장 가능성
+
     # 추가 메타데이터
     keywords: List[str] = field(default_factory=list)
     topics: List[str] = field(default_factory=list)
@@ -47,6 +53,9 @@ class CandidateScore:
     """스코어링 단계의 결과"""
 
     final_score: float = 0.0
+    raw_score: float = 0.0           # 보정 전 점수
+    positive_score: float = 0.0      # 긍정 시그널 합
+    negative_score: float = 0.0      # 부정 시그널 합
     weighted_components: Dict[str, float] = field(default_factory=dict)
     explanation: str = ""  # 점수 산정 이유 (XAI)
 

@@ -68,7 +68,7 @@ class FeatureHydrator:
         prompt = prompt_registry.get("hydration.feature_extraction").render(
             comment=candidate.content
         )
-        log_llm_request("Hydration 피처 추출", f"댓글 {len(candidate.content)}자")
+        # log_llm_request("Hydration 피처 추출", f"댓글 {len(candidate.content)}자")
 
         try:
             # Gemini 호출 (시스템 인스트럭션 등은 Client 내부 설정 활용)
@@ -77,7 +77,7 @@ class FeatureHydrator:
             if not response_text or not response_text.strip():
                 raise ValueError("빈 응답을 수신했습니다.")
 
-            log_llm_response("Hydration 피처 추출", f"응답 {len(response_text)}자")
+            # log_llm_response("Hydration 피처 추출", f"응답 {len(response_text)}자")
             data = validate_json_output(
                 response_text,
                 required_fields=[
@@ -110,6 +110,10 @@ class FeatureHydrator:
                 controversy_score=data.get("controversy_score", 0.0),
                 not_interested=data.get("not_interested", 0.0),
                 report_probability=data.get("report_probability", 0.0),
+                dm_probability=data.get("dm_probability", 0.0),
+                copy_link_probability=data.get("copy_link_probability", 0.0),
+                profile_click=data.get("profile_click", 0.0),
+                bookmark_worthy=data.get("bookmark_worthy", 0.0),
                 keywords=data.get("keywords", []),
                 topics=data.get("topics", []),
             )
@@ -132,6 +136,10 @@ class FeatureHydrator:
                     "controversy_score": features.controversy_score,
                     "not_interested": features.not_interested,
                     "report_probability": features.report_probability,
+                    "dm_probability": features.dm_probability,
+                    "copy_link_probability": features.copy_link_probability,
+                    "profile_click": features.profile_click,
+                    "bookmark_worthy": features.bookmark_worthy,
                     "keywords": features.keywords,
                     "topics": features.topics,
                 },

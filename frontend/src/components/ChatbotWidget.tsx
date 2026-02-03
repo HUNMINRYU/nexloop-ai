@@ -4,105 +4,111 @@ import React, { useState } from 'react';
 import ChatbotPanel from './ChatbotPanel';
 import { useChatbotUsage } from '@/hooks/useChatbotUsage';
 
+// 유백색 말풍선 아이콘 (세련된 스타일)
 function ChatbotIcon() {
-  return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" className="w-full h-full" aria-hidden>
-      {/* 말풍선: 둥근 사각 + 좌하단 꼬리 */}
-      <path
-        d="M12 8h24a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4h-4l-4 6-4-6h-12a4 4 0 0 1-4-4V12a4 4 0 0 1 4-4z"
-        fill="var(--color-primary)"
-        stroke="black"
-        strokeWidth="2.5"
-        strokeLinejoin="round"
-      />
-      {/* 로봇 머리 (흰 원) */}
-      <circle cx="24" cy="22" r="10" fill="white" stroke="black" strokeWidth="2" />
-      {/* 눈: 큰 원 + 동공 + 하이라이트 */}
-      <circle cx="19" cy="20" r="3.5" fill="white" stroke="black" strokeWidth="1.5" />
-      <circle cx="19.5" cy="19.5" r="1.5" fill="black" />
-      <circle cx="20.2" cy="18.8" r="0.4" fill="white" />
-      <circle cx="29" cy="20" r="3.5" fill="white" stroke="black" strokeWidth="1.5" />
-      <circle cx="29.5" cy="19.5" r="1.5" fill="black" />
-      <circle cx="30.2" cy="18.8" r="0.4" fill="white" />
-      {/* 미소 */}
-      <path
-        d="M18 26q3 2 6 0"
-        stroke="black"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        fill="none"
-      />
-      {/* 안테나 + 끝 구 */}
-      <path d="M24 12v-5" stroke="black" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="24" cy="6" r="2.5" fill="white" stroke="black" strokeWidth="1.5" />
-    </svg>
-  );
+    return (
+        <svg
+            width="64"
+            height="64"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-white w-7 h-7 md:w-9 md:h-9"
+        >
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+    );
 }
 
 export default function ChatbotWidget() {
-  const [open, setOpen] = useState(false);
-  const [showLeadCapture, setShowLeadCapture] = useState(false);
-  const { isAuthenticated, remainingMessages } = useChatbotUsage();
+    const [open, setOpen] = useState(false);
+    const [showLeadCapture, setShowLeadCapture] = useState(false);
+    const { isAuthenticated, remainingMessages } = useChatbotUsage();
 
-  const handleLimitReached = () => {
-    setShowLeadCapture(true);
-  };
+    const handleLimitReached = () => {
+        setShowLeadCapture(true);
+    };
 
-  return (
-    <>
-      <div className="fixed bottom-6 right-6 z-[60]">
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="relative w-14 h-14 md:w-16 md:h-16 rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-soft-lg)] flex items-center justify-center hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[var(--shadow-soft-lg)] transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] focus:ring-offset-2"
-          aria-label="AI 챗봇 열기"
-        >
-          <span className="w-10 h-10 md:w-12 md:h-12 block">
-            <ChatbotIcon />
-          </span>
-          {!isAuthenticated && remainingMessages > 0 && (
-            <span className="absolute -top-2 -right-2 bg-[var(--color-primary)] text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
-              {remainingMessages}
-            </span>
-          )}
-        </button>
-      </div>
-      <ChatbotPanel
-        isOpen={open}
-        onClose={() => setOpen(false)}
-        onLimitReached={handleLimitReached}
-      />
-      {showLeadCapture && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setShowLeadCapture(false)}
-          />
-          <div className="relative z-10 bg-white rounded-2xl p-8 max-w-md mx-4 shadow-2xl">
-            <h3 className="text-2xl font-bold mb-4">더 많은 질문이 필요하신가요?</h3>
-            <p className="text-slate-600 mb-6">
-              무료 체험이 종료되었습니다. 계속해서 AI 챗봇을 이용하시려면 회원가입하거나 이메일을 남겨주세요.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowLeadCapture(false);
-                  window.location.href = '/signup';
-                }}
-                className="flex-1 bg-[var(--color-primary)] text-white font-bold py-3 px-6 rounded-xl hover:bg-[var(--color-primary)]/90 transition-colors"
-              >
-                회원가입
-              </button>
-              <button
-                onClick={() => setShowLeadCapture(false)}
-                className="flex-1 border border-slate-300 text-slate-700 font-bold py-3 px-6 rounded-xl hover:bg-slate-50 transition-colors"
-              >
-                닫기
-              </button>
+    return (
+        <>
+            {/* 전역 챗봇 위젯: 글자 영역 전체가 Hover Trigger가 됨 */}
+            <div className="fixed bottom-10 right-10 z-[150] group pointer-events-auto cursor-pointer">
+                {/* 1. AI Assistant 텍스트 힌트 (기본 노출 상태) */}
+                {!open && (
+                    <div className="relative flex flex-col items-end gap-1.5 transition-opacity duration-300 group-hover:opacity-0 pointer-events-auto">
+                        <span className="text-[11px] font-black text-slate-500 uppercase tracking-[0.25em] drop-shadow-sm">
+                            AI Assistant
+                        </span>
+                        <div className="w-12 h-[2px] bg-slate-400 rounded-full" />
+                    </div>
+                )}
+
+                {/* 2. 챗봇 버튼 (텍스트 호버 시 나타남) */}
+                <button
+                    type="button"
+                    onClick={() => setOpen(true)}
+                    className={`absolute bottom-0 right-0 w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white rounded-2xl shadow-2xl transition-all duration-500 ease-out flex items-center justify-center border-2 border-white/20 z-20 transform 
+            ${open ? 'opacity-0 scale-75 pointer-events-none' : 'opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 hover:scale-110 active:scale-95'}
+          `}
+                    aria-label="AI 챗봇 열기"
+                >
+                    <ChatbotIcon />
+
+                    {/* iOS 레드 배지 (#ef4444) */}
+                    {!isAuthenticated && remainingMessages > 0 && (
+                        <span className="absolute -top-2 -right-2 min-w-[22px] h-[22px] bg-[#ef4444] text-white text-[11px] font-black flex items-center justify-center rounded-full shadow-lg border-2 border-slate-900 z-30">
+                            {remainingMessages}
+                        </span>
+                    )}
+
+                    {/* 내부 광택 효과 */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
+                </button>
             </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
+
+            {/* 챗봇 대화 패널 */}
+            <ChatbotPanel isOpen={open} onClose={() => setOpen(false)} onLimitReached={handleLimitReached} />
+
+            {/* 무료 체험 한도 초과 시 팝업 */}
+            {showLeadCapture && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                    <div
+                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        onClick={() => setShowLeadCapture(false)}
+                    />
+                    <div className="relative z-10 bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-100 text-center animate-in fade-in zoom-in duration-300">
+                        <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-6">
+                            ⚠️
+                        </div>
+                        <h3 className="text-2xl font-black mb-4 text-slate-900 leading-tight">지식 탐색 한도 도달</h3>
+                        <p className="text-slate-500 font-medium mb-8 leading-relaxed">
+                            무료 사용자의 질문 한도를 모두 소모하셨습니다.
+                            <br />
+                            계속해서 인텔리전스를 활용하시려면 회원가입이 필요합니다.
+                        </p>
+                        <div className="flex flex-col gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowLeadCapture(false);
+                                    window.location.href = '/signup';
+                                }}
+                                className="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl hover:bg-slate-800 transition-all shadow-lg active:scale-[0.98]"
+                            >
+                                30초 만에 무료 회원가입
+                            </button>
+                            <button
+                                onClick={() => setShowLeadCapture(false)}
+                                className="w-full text-slate-400 font-bold py-2 hover:text-slate-600 transition-all text-sm"
+                            >
+                                나중에 하기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
+    );
 }

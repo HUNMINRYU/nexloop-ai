@@ -162,25 +162,63 @@ def log_success(message: str) -> None:
     get_logger().info(f"SUCCESS: {message}")
 
 
-def log_llm_request(usage: str, details: str = "") -> None:
-    msg = f"[STEP] LLM {usage} - request"
+def log_llm_request(
+    usage: str,
+    details: str = "",
+    model: str = "",
+    prompt_preview: str = "",
+    max_preview_len: int = 150,
+) -> None:
+    """LLM 요청 로그 (상세 버전)"""
+    get_logger().info("")
+    get_logger().info("===== 🤖 LLM 요청 =====")
+    get_logger().info(f"   📌 용도: {usage}")
+    if model:
+        get_logger().info(f"   🧠 모델: {model}")
     if details:
-        msg += f" ({details})"
-    get_logger().info(msg)
+        get_logger().info(f"   📋 상세: {details}")
+    if prompt_preview:
+        preview = prompt_preview[:max_preview_len]
+        if len(prompt_preview) > max_preview_len:
+            preview += "..."
+        # 줄바꿈 처리
+        preview = preview.replace("\n", " ")[:max_preview_len]
+        get_logger().info(f"   📝 프롬프트: {preview}")
 
 
-def log_llm_response(usage: str, details: str = "") -> None:
-    msg = f"LLM {usage} - response"
+def log_llm_response(
+    usage: str,
+    details: str = "",
+    response_preview: str = "",
+    token_count: int = 0,
+    duration_ms: float = 0,
+    max_preview_len: int = 150,
+) -> None:
+    """LLM 응답 로그 (상세 버전)"""
+    get_logger().info(f"✅ LLM 응답 수신: {usage}")
     if details:
-        msg += f" ({details})"
-    get_logger().info(msg)
+        get_logger().info(f"   📊 결과: {details}")
+    if response_preview:
+        preview = response_preview[:max_preview_len]
+        if len(response_preview) > max_preview_len:
+            preview += "..."
+        preview = preview.replace("\n", " ")[:max_preview_len]
+        get_logger().info(f"   📤 응답: {preview}")
+    if token_count > 0:
+        get_logger().info(f"   🔢 토큰 사용: {token_count}")
+    if duration_ms > 0:
+        get_logger().info(f"   ⏱️ 소요: {duration_ms:.0f}ms")
 
 
-def log_llm_fail(usage: str, error: str = "") -> None:
-    msg = f"LLM {usage} - fail"
+def log_llm_fail(usage: str, error: str = "", model: str = "") -> None:
+    """LLM 실패 로그 (상세 버전)"""
+    get_logger().error("===== ❌ LLM 요청 실패 =====")
+    get_logger().error(f"   📌 용도: {usage}")
+    if model:
+        get_logger().error(f"   🧠 모델: {model}")
     if error:
-        msg += f" ({error})"
-    get_logger().error(msg)
+        error_short = str(error)[:200]
+        get_logger().error(f"   ⚠️ 오류: {error_short}")
 
 
 def log_api_call(api_name: str, endpoint: str = "", status: str = "sent") -> None:
@@ -232,3 +270,158 @@ def log_function(name: str):
         return wrapper
 
     return decorator
+
+
+# ============================================================
+# 🇰🇷 한글 상세 로깅 함수 (Input/Output 추적용)
+# ============================================================
+
+def log_stage_start(stage_name: str, description: str = "") -> None:
+    """단계 시작 로그 (한글)"""
+    get_logger().info("")
+    get_logger().info("=" * 50)
+    get_logger().info(f"🚀 [{stage_name}] 시작")
+    if description:
+        get_logger().info(f"   ℹ️  {description}")
+
+
+def log_stage_end(stage_name: str, result_summary: str = "", duration_ms: float = 0) -> None:
+    """단계 완료 로그 (한글)"""
+    get_logger().info(f"✅ [{stage_name}] 완료")
+    if result_summary:
+        get_logger().info(f"   📊 결과: {result_summary}")
+    if duration_ms > 0:
+        get_logger().info(f"   ⏱️  소요 시간: {duration_ms:.2f}ms")
+    get_logger().info("")
+
+
+def log_stage_fail(stage_name: str, error_msg: str = "") -> None:
+    """단계 실패 로그 (한글)"""
+    get_logger().error(f"❌ [{stage_name}] 실패")
+    if error_msg:
+        get_logger().error(f"   ⚠️  오류: {error_msg}")
+
+
+def log_input_data(label: str, data: object, max_length: int = 200) -> None:
+    """입력 데이터 로그 (한글)"""
+    data_str = str(data)
+    if len(data_str) > max_length:
+        data_str = data_str[:max_length] + "... (생략)"
+    get_logger().info(f"   📥 [입력] {label}: {data_str}")
+
+
+def log_output_data(label: str, data: object, max_length: int = 200) -> None:
+    """출력 데이터 로그 (한글)"""
+    data_str = str(data)
+    if len(data_str) > max_length:
+        data_str = data_str[:max_length] + "... (생략)"
+    get_logger().info(f"   📤 [출력] {label}: {data_str}")
+
+
+def log_prompt_start(prompt_name: str, context: str = "") -> None:
+    """프롬프트 호출 시작 로그"""
+    get_logger().info(f"   🤖 [프롬프트] {prompt_name} 호출 시작")
+    if context:
+        get_logger().info(f"      📋 컨텍스트: {context[:150]}..." if len(context) > 150 else f"      📋 컨텍스트: {context}")
+
+
+def log_prompt_end(prompt_name: str, output_preview: str = "") -> None:
+    """프롬프트 호출 완료 로그"""
+    get_logger().info(f"   ✨ [프롬프트] {prompt_name} 응답 수신")
+    if output_preview:
+        preview = output_preview[:150] + "..." if len(output_preview) > 150 else output_preview
+        get_logger().info(f"      📝 응답 미리보기: {preview}")
+
+
+def log_api_request(service_name: str, endpoint: str, params: dict = None) -> None:
+    """API 요청 로그 (상세)"""
+    get_logger().info(f"   🌐 [API 요청] {service_name} → {endpoint}")
+    if params:
+        params_str = str(params)[:100] + "..." if len(str(params)) > 100 else str(params)
+        get_logger().info(f"      📦 파라미터: {params_str}")
+
+
+def log_api_response(service_name: str, status: str, data_summary: str = "") -> None:
+    """API 응답 로그 (상세)"""
+    get_logger().info(f"   📬 [API 응답] {service_name}: {status}")
+    if data_summary:
+        get_logger().info(f"      📊 데이터 요약: {data_summary}")
+
+
+def log_llm_input(model_name: str, prompt_preview: str, token_estimate: int = 0) -> None:
+    """LLM 입력 로그 (상세)"""
+    get_logger().info(f"   🧠 [LLM 입력] 모델: {model_name}")
+    preview = prompt_preview[:200] + "..." if len(prompt_preview) > 200 else prompt_preview
+    get_logger().info(f"      📝 프롬프트: {preview}")
+    if token_estimate > 0:
+        get_logger().info(f"      🔢 예상 토큰: ~{token_estimate}")
+
+
+def log_llm_output(model_name: str, response_preview: str, token_used: int = 0) -> None:
+    """LLM 출력 로그 (상세)"""
+    get_logger().info(f"   💡 [LLM 출력] 모델: {model_name}")
+    preview = response_preview[:200] + "..." if len(response_preview) > 200 else response_preview
+    get_logger().info(f"      📤 응답: {preview}")
+    if token_used > 0:
+        get_logger().info(f"      🔢 사용 토큰: {token_used}")
+
+
+def log_pipeline_progress(step_number: int, total_steps: int, step_name: str, status: str = "진행중") -> None:
+    """파이프라인 진행 상황 로그"""
+    percent = int((step_number / total_steps) * 100)
+    get_logger().info(f"   📊 진행: {percent}% - {step_name}: {status}")
+
+
+def log_service_call(service_name: str, method_name: str, args_summary: str = "") -> None:
+    """서비스 호출 로그"""
+    get_logger().info(f"   ⚙️  [서비스 호출] {service_name}.{method_name}()")
+    if args_summary:
+        get_logger().info(f"      📦 인자: {args_summary}")
+
+
+def log_service_result(service_name: str, method_name: str, result_summary: str = "") -> None:
+    """서비스 결과 로그"""
+    get_logger().info(f"   ✔️  [서비스 완료] {service_name}.{method_name}()")
+    if result_summary:
+        get_logger().info(f"      📤 결과: {result_summary}")
+
+
+def log_json_data(label: str, json_obj: dict, keys_to_show: list = None) -> None:
+    """JSON 데이터 로그 (선택적 키만 표시)"""
+    if keys_to_show:
+        filtered = {k: json_obj.get(k, "(없음)") for k in keys_to_show if k in json_obj}
+        get_logger().info(f"   📋 [데이터] {label}: {filtered}")
+    else:
+        preview = str(json_obj)[:200] + "..." if len(str(json_obj)) > 200 else str(json_obj)
+        get_logger().info(f"   📋 [데이터] {label}: {preview}")
+
+
+def log_product_context(product: dict) -> None:
+    """제품 컨텍스트 로그"""
+    name = product.get("name", "N/A")
+    category = product.get("category", "N/A")
+    desc_preview = (product.get("description") or "")[:50]
+    get_logger().info(f"   🛒 [제품 정보] 이름: {name}, 카테고리: {category}")
+    if desc_preview:
+        get_logger().info(f"      📝 설명: {desc_preview}...")
+
+
+def log_separator(style: str = "single") -> None:
+    """구분선 로그"""
+    if style == "double":
+        get_logger().info("=" * 60)
+    else:
+        get_logger().info("=" * 50)
+
+
+def log_summary_box(title: str, items: list) -> None:
+    """요약 로그"""
+    get_logger().info("")
+    get_logger().info("=" * 50)
+    get_logger().info(f"📊 {title}")
+    get_logger().info("=" * 50)
+    for item in items[:10]:  # 최대 10개만 표시
+        get_logger().info(f"  • {item}")
+    if len(items) > 10:
+        get_logger().info(f"  ... 외 {len(items) - 10}개 항목")
+    get_logger().info("=" * 50)

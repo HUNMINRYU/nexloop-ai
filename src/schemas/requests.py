@@ -184,6 +184,16 @@ class NaverInsightBatchRequest(BaseModel):
     period_start: str | None = None
     period_end: str | None = None
 
+class YouTubeInsightBatchRequest(BaseModel):
+    query: str = Field(..., min_length=1)
+    max_results: int = Field(default=10, ge=1, le=50)
+    include_comments: bool = True
+    campaign_name: str | None = None
+    channel: str | None = None
+    region: str | None = None
+    period_start: str | None = None
+    period_end: str | None = None
+
 class DailyReportRequest(BaseModel):
     query: str = Field(..., min_length=1)
     max_results: int = Field(default=50, ge=1, le=50)

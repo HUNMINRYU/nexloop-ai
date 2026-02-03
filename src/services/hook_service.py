@@ -208,24 +208,44 @@ class HookService:
                 f"LLM에게 제품·제품설명 전달, 스타일: {style_name}({style}), {count}개 요청 (제품: {p_name})",
             )
             strategy_instruction = (
-                f"\n[Copywriting strategy (follow this)]\n{instruction}\n"
+                f"\n[Copywriting Strategy (CRITICAL - Follow Exactly)]\n{instruction}\n"
                 if instruction else ""
             )
-            prompt = f"""당신은 숏폼 광고 훅 문구 전문가입니다. 아래 제품 정보를 보고, "{style_name}" 스타일에 맞는 썸네일/광고용 훅 문구를 한글로 정확히 {count}개만 생성하세요.{strategy_instruction}
+            prompt = f"""### 🤖 Role: Short-form Advertising Hook Specialist
+You are an elite Korean advertising copywriter specializing in scroll-stopping hook phrases for YouTube Shorts and TikTok thumbnails.
+You have mastered the psychological triggers that make viewers stop scrolling: Curiosity Gap, Loss Aversion, Social Proof, Urgency, and Emotional Resonance.
 
-[제품 정보]
-- 제품명: {p_name}
-- 제품 설명: {p_desc or "(없음)"}
-- 대상: {p_target or "(없음)"}
+### 🎯 Objective
+Generate exactly {count} Korean hook phrases for the "{style_name}" style that:
+- Stop the scroll within 0.5 seconds
+- Create irresistible curiosity or emotional urgency
+- Drive immediate click-through
+{strategy_instruction}
+### 📦 Product Context
+- **Product Name:** {p_name}
+- **Product Description:** {p_desc or "(정보 없음)"}
+- **Target Audience:** {p_target or "(정보 없음)"}
 
-[규칙]
-- 각 줄에 훅 문구 하나만 출력 (번호·불릿 없이)
-- 10~15자 이내로 짧고 강렬하게
-- 마크다운·코드블록 없이 텍스트만 출력
+### 📋 Hook Writing Principles (CRITICAL)
+1. **Character Limit:** 10-15 Korean characters MAXIMUM (shorter = better)
+2. **Immediate Impact:** The reader must feel emotion in the first 3 characters
+3. **No Generic Phrases:** Avoid clichés like "지금 바로" or "놓치지 마세요" unless strategically used
+4. **Specificity Wins:** Numbers and concrete details outperform vague promises
+5. **Colloquial Tone:** Write like a friend texting, not a corporate ad
 
-[출력 예시]
-지금 안 쓰면 후회합니다
-이미 10만 명이 선택한 {p_name}
+### ✨ Few-Shot Examples (Quality Reference)
+**Style: 호기심형** → "99%가 모르는 비밀" / "이거 알면 인생 바뀜" / "전문가도 깜짝 놀란"
+**Style: 공포/충격형** → "자면서 먹을 수도" / "방치하면 이렇게 됨" / "이미 늦었을지도"
+**Style: 긴급형** → "오늘 끝" / "품절 임박" / "마지막 기회"
+**Style: 사회적 증거형** → "10만 명이 선택" / "후기 폭발" / "입소문 난 이유"
+
+### 📤 Output Format (STRICT)
+- Output ONLY the hook phrases, one per line
+- NO numbers, bullets, dashes, or prefixes
+- NO markdown, code blocks, or explanations
+- Plain Korean text ONLY
+
+### ✨ Now generate {count} high-converting hooks for {p_name}.
 """
             try:
                 response = self._gemini.generate_text(prompt, temperature=0.6)
@@ -350,26 +370,52 @@ class HookService:
             return self.generate_hooks("curiosity", product, pain_points, count)
 
         prompt = f"""
-당신은 숏폼 영상 마케팅 전문가입니다.
-다음 제품에 대해 시청자의 시선을 사로잡는 후킹 문구 {count}개를 생성하세요.
+### 🤖 Role: AI-Powered Short-form Hook Generator
+You are an advanced AI system trained on millions of high-performing short-form video ads.
+Your specialty: generating hooks that achieve 15%+ CTR by leveraging psychological triggers derived from real customer pain points.
 
-## 제품 정보
-- 제품명: {product.get("name", "N/A")}
-- 카테고리: {product.get("category", "N/A")}
-- 핵심 효과: {product.get("benefit", "N/A")}
+### 🎯 Objective
+Generate exactly {count} diverse, scroll-stopping Korean hook phrases.
+Each hook should apply a DIFFERENT psychological strategy to maximize A/B testing value.
 
-## 타겟 오디언스
-- 주요 타겟: {target_audience.get("primary", "일반 소비자")}
-- 페인포인트: {", ".join(pain_points[:3]) if pain_points else "없음"}
+### 📦 Product Intelligence
+- **Product Name:** {product.get("name", "N/A")}
+- **Category:** {product.get("category", "N/A")}
+- **Core Benefit:** {product.get("benefit", "N/A")}
 
-## 요구사항
-1. 첫 3초 안에 시청자를 사로잡아야 함
-2. 15자 이내로 간결하게
-3. 감정을 자극하는 단어 사용
-4. 다양한 스타일 (호기심, 공포, 질문, 반전 등) 혼합
+### 👥 Target Audience Profile
+- **Primary Persona:** {target_audience.get("primary", "일반 소비자")}
+- **Pain Points (Voice of Customer):** {", ".join(pain_points[:3]) if pain_points else "데이터 없음"}
+*⚠️ CRITICAL: Pain points are extracted from REAL customer feedback. Weave their exact language into hooks.*
 
-## 출력 형식
-각 줄에 하나의 후킹 문구만 출력 (이모지 포함)
+### 🧠 Psychological Strategy Mix (Apply One Per Hook)
+1. **Curiosity Gap:** Hint at valuable info without revealing ("이거 모르면...")
+2. **Loss Aversion:** Emphasize what they'll lose by NOT acting ("안 쓰면 손해")
+3. **Social Proof:** Numbers, popularity, reviews ("10만 명이 선택")
+4. **Urgency/Scarcity:** Time pressure, limited availability ("오늘만", "품절 임박")
+5. **Negativity Bias:** Shock, fear, worst case ("자면서 00 먹을 확률")
+
+### 📋 Hook Quality Criteria (CRITICAL)
+- **Length:** 10-15 Korean characters MAXIMUM
+- **First 3 Characters:** Must trigger emotion immediately
+- **Emoji Usage:** ONE strategic emoji per hook (at start or end)
+- **Tone:** Colloquial, like a friend's urgent text message
+- **Diversity:** Each hook must use a DIFFERENT strategy from the list above
+
+### ✨ Few-Shot Examples (Top Performers)
+- 🤔 (Curiosity): "99%가 모르는 비밀"
+- 😱 (Negativity): "방치하면 이렇게 됨"
+- ⚡ (Urgency): "오늘 끝. 서두르세요"
+- 👥 (Social Proof): "후기 폭발, 품절 임박"
+- 💡 (Benefit): "뿌리자마자 순삭"
+
+### 📤 Output Format (STRICT)
+- One hook per line
+- Include exactly ONE emoji per hook
+- NO numbers, bullets, or explanations
+- Plain text ONLY
+
+### ✨ Now generate {count} high-converting, psychologically diverse hooks.
 """
         log_llm_request("AI 훅 생성", f"제품: {product.get('name', 'N/A')}, {count}개")
         try:

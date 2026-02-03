@@ -29,7 +29,6 @@ class TTLCache:
         """
         self._cache: Dict[str, Dict[str, Any]] = {}
         self._default_ttl = default_ttl
-        logger.info(f"TTLCache 초기화: 기본 TTL={default_ttl}초")
 
     def _generate_key(self, *args, **kwargs) -> str:
         """인자들을 조합하여 고유 캐시 키 생성"""
@@ -47,11 +46,9 @@ class TTLCache:
 
         # TTL 체크
         if time.time() > entry["expires_at"]:
-            logger.debug(f"캐시 만료: key={key[:8]}...")
             del self._cache[key]
             return None
 
-        logger.debug(f"캐시 히트: key={key[:8]}...")
         return entry["value"]
 
     def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
@@ -62,13 +59,11 @@ class TTLCache:
             "expires_at": time.time() + ttl,
             "created_at": time.time(),
         }
-        logger.debug(f"캐시 저장: key={key[:8]}..., ttl={ttl}초")
 
     def invalidate(self, key: str) -> bool:
         """특정 키의 캐시 삭제"""
         if key in self._cache:
             del self._cache[key]
-            logger.debug(f"캐시 삭제: key={key[:8]}...")
             return True
         return False
 
@@ -76,7 +71,6 @@ class TTLCache:
         """모든 캐시 삭제"""
         count = len(self._cache)
         self._cache.clear()
-        logger.info(f"전체 캐시 삭제: {count}개 항목")
         return count
 
     def cleanup_expired(self) -> int:
@@ -88,8 +82,6 @@ class TTLCache:
         for key in expired_keys:
             del self._cache[key]
 
-        if expired_keys:
-            logger.debug(f"만료 캐시 정리: {len(expired_keys)}개")
         return len(expired_keys)
 
     @property
@@ -137,11 +129,9 @@ def cached(ttl: int = 300, cache_key_prefix: str = ""):
             # 캐시 조회
             cached_result = _api_cache.get(cache_key)
             if cached_result is not None:
-                logger.info(f"[캐시 히트] {func.__name__} - 캐시된 결과 반환")
                 return cached_result
 
             # 캐시 미스: 실제 함수 실행
-            logger.info(f"[캐시 미스] {func.__name__} - API 호출 실행")
             result = func(*args, **kwargs)
 
             # 결과 캐싱 (성공적인 결과만)

@@ -110,9 +110,14 @@ class GeminiClient:
         use_grounding: bool = False,
     ) -> str:
         """텍스트 생성 (재시도 로직 적용)"""
+        import time as _time
+        start_time = _time.time()
+        
         log_llm_request(
             "텍스트 생성",
-            f"프롬프트 {len(prompt)}자, temperature={temperature}, grounding={use_grounding}",
+            details=f"temperature={temperature}, grounding={use_grounding}",
+            model=self._text_model,
+            prompt_preview=prompt,
         )
         try:
             from google.genai import types
@@ -133,12 +138,19 @@ class GeminiClient:
                 )
 
             response = self.retry_with_backoff(_api_call)
-            out_len = len(response.text) if response and response.text else 0
-            log_llm_response("텍스트 생성", f"응답 {out_len}자")
-            return response.text
+            elapsed_ms = (_time.time() - start_time) * 1000
+            
+            response_text = response.text if response and response.text else ""
+            log_llm_response(
+                "텍스트 생성",
+                details=f"응답 {len(response_text)}자",
+                response_preview=response_text,
+                duration_ms=elapsed_ms,
+            )
+            return response_text
 
         except Exception as e:
-            log_llm_fail("텍스트 생성", str(e))
+            log_llm_fail("텍스트 생성", str(e), model=self._text_model)
             raise GeminiAPIError(f"텍스트 생성 실패: {e}")
 
     @retry_on_error(max_attempts=3, base_delay=1.0, max_delay=8.0)
@@ -148,8 +160,14 @@ class GeminiClient:
         aspect_ratio: str = "16:9",
     ) -> bytes | None:
         """이미지 생성 (Retry 적용) (genesis_kr/v3 방식: generate_content + response_modalities)"""
+        import time as _time
+        start_time = _time.time()
+        
         log_llm_request(
-            "이미지 생성", f"프롬프트 {len(prompt)}자, aspect_ratio={aspect_ratio}"
+            "이미지 생성",
+            details=f"aspect_ratio={aspect_ratio}",
+            model=self._image_model,
+            prompt_preview=prompt,
         )
         try:
             import base64
@@ -169,6 +187,7 @@ class GeminiClient:
                 )
 
             response = self.retry_with_backoff(_api_call)
+            elapsed_ms = (_time.time() - start_time) * 1000
 
             # 이미지가 포함된 응답 처리
             if response.candidates and response.candidates[0].content.parts:
@@ -177,14 +196,18 @@ class GeminiClient:
                         img_data = part.inline_data.data
                         if isinstance(img_data, str):
                             img_data = base64.b64decode(img_data)
-                        log_llm_response("이미지 생성", f"{len(img_data):,} bytes")
+                        log_llm_response(
+                            "이미지 생성",
+                            details=f"{len(img_data):,} bytes 이미지 생성됨",
+                            duration_ms=elapsed_ms,
+                        )
                         return img_data
 
-            log_llm_fail("이미지 생성", "응답에 이미지 없음")
+            log_llm_fail("이미지 생성", "응답에 이미지 없음", model=self._image_model)
             return None
 
         except Exception as e:
-            log_llm_fail("이미지 생성", str(e))
+            log_llm_fail("이미지 생성", str(e), model=self._image_model)
             raise GeminiAPIError(f"이미지 생성 실패: {e}")
 
     @cached(ttl=7200, cache_key_prefix="gemini")
@@ -200,7 +223,8 @@ class GeminiClient:
         use_search_grounding: bool = True,
     ) -> dict[str, Any]:
         """마케팅 데이터 분석 (Retry & Validation 강화)"""
-        log_llm_request("마케팅 분석", f"제품: {product_name}")
+        import time as _time
+        start_time = _time.time()
 
         try:
             from google.genai import types
@@ -234,6 +258,13 @@ class GeminiClient:
                 ),
             )
 
+            log_llm_request(
+                "마케팅 분석",
+                details=f"제품: {product_name}, grounding={use_search_grounding}",
+                model=self._text_model,
+                prompt_preview=analysis_prompt,
+            )
+
             if progress_callback:
                 progress_callback("AI 분석 진행 중...", 50)
 
@@ -254,13 +285,20 @@ class GeminiClient:
                 )
 
             response = self.retry_with_backoff(_api_call)
+            elapsed_ms = (_time.time() - start_time) * 1000
 
             if progress_callback:
                 progress_callback("분석 결과 처리 중...", 80)
 
             result = self._validate_json_output(response.text)
-            out_len = len(response.text) if response and response.text else 0
-            log_llm_response("마케팅 분석", f"JSON {out_len}자")
+            response_text = response.text if response and response.text else ""
+            
+            log_llm_response(
+                "마케팅 분석",
+                details=f"JSON {len(response_text)}자 수신",
+                response_preview=response_text,
+                duration_ms=elapsed_ms,
+            )
 
             if progress_callback:
                 progress_callback("분석 완료!", 100)
@@ -268,7 +306,7 @@ class GeminiClient:
             return result
 
         except Exception as e:
-            log_llm_fail("마케팅 분석", str(e))
+            log_llm_fail("마케팅 분석", str(e), model=self._text_model)
             if progress_callback:
                 progress_callback(f"오류: {e}", 0)
             return {"error": str(e)}
@@ -311,44 +349,56 @@ class GeminiClient:
         product_name = product.get("name", "제품")
         product_category = product.get("category", "일반")
 
-        prompt = f"""
-Create a stunning marketing thumbnail image for e-commerce.
+        prompt = f"""### 🤖 Role: Premium E-commerce Visual Designer
+You are an expert commercial photographer and digital artist specializing in high-conversion e-commerce imagery.
+Your mission: Create a thumbnail that stops the scroll and drives immediate purchase intent.
 
-PRODUCT: {product_name}
-CATEGORY: {product_category}
-HOOK TEXT: "{hook_text}"
+### 🎯 Product Context
+- **Product Name:** {product_name}
+- **Category:** {product_category}
+- **Hook Text:** "{hook_text}"
 
-STYLE REQUIREMENTS:
-- Visual Style: {style} with high-end commercial quality
-- Color Scheme: {color_scheme}
-- Layout: {layout}
+### 🎨 Visual Direction
+- **Style:** {style} with high-end commercial quality
+- **Color Scheme:** {color_scheme}
+- **Layout:** {layout}
 """
         if style_modifier:
-            prompt += f"\n- Additional Modifier: {style_modifier}"
+            prompt += f"- **Style Modifier:** {style_modifier}\n"
 
         prompt += f"""
+### 📐 Composition Requirements
+- **Hero Element:** Product must be the undeniable focal point
+- **Background:** Clean, uncluttered, complementary to product colors
+- **Lighting:** Dramatic studio lighting with soft, professional shadows
+- **Depth:** Subtle depth-of-field to separate product from background
+- **Safe Zone:** Leave 10% margin on all edges for platform UI overlay
 
-COMPOSITION:
-- Professional product photography aesthetic
-- Clean, uncluttered background
-- Dramatic lighting with soft shadows
-- Focus on product as hero element
+### ✍️ Text Overlay (CRITICAL)
+- **Text Content:** "{hook_text}"
+- **Placement:** Prominent, readable at thumbnail size
+- **Typography:** Modern, bold sans-serif (no script or thin fonts)
+- **Contrast:** High contrast against background (use text shadow or backing)
+- **Size:** Large enough to read on mobile (at least 15% of image height)
 
-TEXT OVERLAY:
-- Include hook text "{hook_text}" prominently
-- Use modern, bold typography
-- Ensure high contrast for readability
+### 🔧 Technical Specifications
+- **Resolution:** 8K quality, ultra-sharp details
+- **Aspect Ratio:** {aspect_ratio}
+- **Render Style:** Photorealistic with subtle enhancement
+- **Color Profile:** Vibrant but natural, Instagram-ready
 
-TECHNICAL:
-- High resolution, sharp details
-- Aspect ratio {aspect_ratio}
-- Photorealistic quality
-- No watermarks or logos
+### 💎 Mood & Emotion
+- **Premium Feel:** Luxurious, trustworthy, professional craftsmanship
+- **Urgency:** Visual cues that create FOMO (limited, exclusive vibe)
+- **Desire:** Make viewers imagine owning this product
+- **Action:** Subtle visual flow guiding eye to key elements
 
-MOOD:
-- Premium, trustworthy, professional
-- Appeals to online shoppers
-- Creates urgency and desire
+### ⛔ Negative Constraints (AVOID)
+- NO watermarks, logos, or brand identifiers (unless requested)
+- NO cluttered or busy backgrounds
+- NO unrealistic or distorted product proportions
+- NO low-quality textures or blurry elements
+- NO generic stock photo aesthetics
 """
         return prompt.strip()
 
@@ -362,10 +412,9 @@ MOOD:
         progress_callback: Optional[Callable[[str, int], None]] = None,
     ) -> bytes | None:
         """마케팅 썸네일 생성"""
+        import time as _time
+        start_time = _time.time()
         p_name = product.get("name", "N/A")
-        log_llm_request(
-            "썸네일 생성", f"제품: {p_name}, 훅: {hook_text[:20]}..., 스타일: {style}"
-        )
 
         try:
             if progress_callback:
@@ -379,6 +428,13 @@ MOOD:
                 aspect_ratio=aspect_ratio,
             )
 
+            log_llm_request(
+                "썸네일 생성",
+                details=f"제품: {p_name}, 스타일: {style}, 비율: {aspect_ratio}",
+                model=self._image_model,
+                prompt_preview=prompt,
+            )
+
             if progress_callback:
                 progress_callback("이미지 생성 중...", 30)
 
@@ -387,8 +443,14 @@ MOOD:
             if progress_callback:
                 progress_callback("이미지 처리 중...", 80)
 
+            elapsed_ms = (_time.time() - start_time) * 1000
+
             if image_data:
-                log_llm_response("썸네일 생성", f"{len(image_data):,} bytes")
+                log_llm_response(
+                    "썸네일 생성",
+                    details=f"{len(image_data):,} bytes 썸네일 생성 완료",
+                    duration_ms=elapsed_ms,
+                )
                 if progress_callback:
                     progress_callback("썸네일 준비 완료!", 100)
                 return image_data
@@ -396,7 +458,7 @@ MOOD:
             return None
 
         except Exception as e:
-            log_llm_fail("썸네일 생성", str(e))
+            log_llm_fail("썸네일 생성", str(e), model=self._image_model)
             if progress_callback:
                 progress_callback(f"오류: {e}", 0)
             return None

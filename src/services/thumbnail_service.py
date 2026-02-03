@@ -1,14 +1,7 @@
-"""
-썸네일 서비스 V2 (Final Optimized)
-- Ghosting(텍스트 겹침) 방지
-- UI Hallucination(유튜브 화면 그리기) 방지
-- 제품 일관성 확보 (visual_description)
-- 상품 설명 → 시각 정보 추출 후 자동 생성 (extract_visual_info, generate_from_description)
-"""
-
 import json
 import re
-from typing import Callable, Optional
+from collections.abc import Callable
+from typing import Optional
 
 from config.products import get_product_by_name
 from core.exceptions import ThumbnailGenerationError
@@ -117,8 +110,8 @@ class ThumbnailService:
         hook_text: str,
         style: str = "neobrutalism",
         include_text_overlay: bool = False,
-        accent_color: Optional[str] = None,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        accent_color: str | None = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> bytes | None:
         """
         썸네일 생성
@@ -163,7 +156,7 @@ class ThumbnailService:
         product: dict,
         hook_text: str,
         accent_color: str = "yellow",
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> bytes | None:
         """
         네오브루탈리즘 스타일 썸네일 생성
@@ -364,7 +357,17 @@ class ThumbnailService:
     ) -> list[dict]:
         """전략 기반 썸네일 생성"""
         # 전략에서 훅 텍스트 추출
-        hooks = strategy.get("hook_suggestions", [])
+        # 전략에서 훅 텍스트 추출 (Dict/Str 혼용 지원)
+        raw_hooks = strategy.get("hook_suggestions", [])
+        hooks = []
+        for h in raw_hooks:
+            if isinstance(h, dict):
+                h_text = h.get("hook")
+                if h_text:
+                    hooks.append(h_text)
+            elif h:
+                hooks.append(str(h))
+        
         if not hooks:
             hooks = [f"{product.get('name', '제품')} 지금 바로!"]
 
@@ -393,32 +396,51 @@ class ThumbnailService:
         }
 
         if hasattr(self._client, "generate_text"):
-            prompt = f"""[Role]
-You are an expert marketing copywriter and art director.
-Analyze the product description below and output a JSON object.
+            prompt = f"""### 🤖 Role: Marketing Art Director & Visual Copywriter
+You are an expert marketing art director with a keen eye for visual storytelling and a mastery of conversion-focused copywriting.
+Your specialty: transforming product descriptions into compelling visual concepts that drive clicks and conversions.
 
-[Product Description]
+### 🎯 Objective
+Analyze the product description below and output a JSON object containing:
+1. **recommended_style**: The BEST thumbnail style from the provided keys
+2. **hook_text**: A Korean hook phrase (12 chars max) that PERFECTLY matches the tone of the selected style
+3. **visual_description**: An English prompt for image generation (product appearance only)
+
+### 📦 Product Description to Analyze
 {raw_description}
 
-[Task]
-1. Select the BEST thumbnail style from the provided keys based on the product vibe.
-   Style keys (use exactly as-is): {style_keys}
-2. Write a 'hook_text' (Korean, under 12 chars) that PERFECTLY matches the tone of the selected style. Use the Style Copy Guide below.
-3. Write a 'visual_description' (English) for the image generation. Describe product appearance only (e.g. color, material, shape).
+### 🎨 Available Style Keys (Use Exactly As-Is)
+{style_keys}
 
-[Style Copy Guide]
+### 📋 Style-Specific Copy Tone Guide (CRITICAL)
 {STYLE_COPY_GUIDE}
 
-[Output Format (JSON Only)]
+### ✨ Few-Shot Examples (Quality Reference)
+**Example 1: Pest Control Product**
+- Input: "바퀴벌레를 순식간에 박멸하는 강력한 살충제"
+- Output: {{"recommended_style": "negativity", "hook_text": "방치하면 이렇게 됨", "visual_description": "white plastic spray bottle with green toxic warning label, held by hand, dark kitchen background with shadow of roach"}}
+
+**Example 2: Beauty Serum**
+- Input: "3일 만에 피부가 달라지는 프리미엄 세럼"
+- Output: {{"recommended_style": "studio_hero", "hook_text": "3초 물광 피부", "visual_description": "luxury glass dropper bottle with gold cap and glowing liquid inside, soft studio lighting, clean white background"}}
+
+### 🧠 Decision Process (Think Step-by-Step)
+1. **Identify Product Category:** What type of product is this? (Beauty? Tech? Household?)
+2. **Match Emotional Tone:** Which style's tone best fits this product's value proposition?
+3. **Craft Style-Matched Hook:** Write a hook that sounds native to the selected style's copy guide
+4. **Visualize Product:** Describe ONLY the physical appearance (color, shape, material, setting)
+
+### 📤 Output Format (STRICT - JSON ONLY)
 {{
-    "recommended_style": "style_key_here",
-    "hook_text": "Style-matched Korean text here",
-    "visual_description": "English visual prompt...",
-    "name": "Product Name",
-    "category": "Category"
+    "recommended_style": "style_key_from_list",
+    "hook_text": "Korean hook text (max 12 chars, style-matched tone)",
+    "visual_description": "English visual description for image generation (product appearance only)",
+    "name": "Product Name (extracted or inferred)",
+    "category": "Product Category"
 }}
 
-Respond with ONLY the JSON object. No markdown, no code block."""
+⚠️ CRITICAL: Output ONLY the JSON object. No markdown, no code blocks, no explanations.
+"""
             log_llm_request("상품 설명 분석", f"설명 {len(raw_description)}자")
             try:
                 response = self._client.generate_text(prompt, temperature=0.3)

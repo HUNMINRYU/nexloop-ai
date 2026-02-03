@@ -184,6 +184,7 @@ class CollectedData(BaseModel):
     """수집된 데이터"""
 
     youtube_data: Optional[dict[str, Any]] = Field(default=None, description="YouTube 데이터")
+    youtube_videos: list[dict[str, Any]] = Field(default_factory=list, description="YouTube 비디오 목록")
     naver_data: Optional[dict[str, Any]] = Field(default=None, description="네이버 데이터")
     pain_points: list[dict[str, Any]] = Field(default_factory=list, description="페인 포인트")
     gain_points: list[dict[str, Any]] = Field(default_factory=list, description="게인 포인트")

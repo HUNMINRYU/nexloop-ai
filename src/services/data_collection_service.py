@@ -71,6 +71,10 @@ class DataCollectionService:
                 progress_callback(PipelineStep.DATA_COLLECTION, "시장 동향 수집 중...")
             collected_data.market_trends = self._market_trend.get_market_trends(product)
 
+        # YouTube 비디오 목록 저장
+        if youtube_data and "videos" in youtube_data:
+            collected_data.youtube_videos = youtube_data["videos"]
+
         if progress_callback:
             progress_callback(PipelineStep.COMMENT_ANALYSIS, "X-Algorithm 인사이트 분석 중...")
 

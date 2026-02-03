@@ -33,11 +33,19 @@ from utils.logger import (
     get_logger,
     log_error,
     log_info,
-    log_section,
-    log_step,
     log_success,
     log_timing,
     log_warning,
+    # 한글 상세 로깅 함수들
+    log_stage_start,
+    log_stage_end,
+    log_stage_fail,
+    log_input_data,
+    log_output_data,
+    log_product_context,
+    log_separator,
+    log_summary_box,
+    log_pipeline_progress,
 )
 from services.data_collection_service import DataCollectionService
 from services.history_service import HistoryService
@@ -80,7 +88,16 @@ class PipelineService:
         progress_callback: Optional[Callable[[PipelineProgress], None]] = None,
     ) -> PipelineResult:
         """파이프라인 실행"""
-        log_section(f"파이프라인 실행 시작: {product.get('name', 'N/A')}")
+        # ===== 🚀 파이프라인 시작 - 입력 데이터 로깅 =====
+        log_separator("double")
+        log_stage_start("파이프라인 실행", f"제품: {product.get('name', 'N/A')}")
+        log_product_context(product)
+        log_input_data("설정 - 썸네일 생성", config.generate_thumbnail)
+        log_input_data("설정 - 비디오 생성", config.generate_video)
+        log_input_data("설정 - SNS 포스팅 생성", config.generate_social)
+        log_input_data("설정 - GCS 업로드", config.upload_to_gcs)
+        log_separator("single")
+
         start_time = time.time()
 
         progress = PipelineProgress()
@@ -115,12 +132,21 @@ class PipelineService:
 
         def update_progress(step: PipelineStep, message: str = "") -> None:
             progress.update(step, message)
-            log_step(f"Pipeline Step: {step.name}", "in progress", message)
+            log_pipeline_progress(
+                step_number=list(PipelineStep).index(step) + 1,
+                total_steps=len(PipelineStep),
+                step_name=step.name,
+                status=message or "진행중"
+            )
             if progress_callback:
                 progress_callback(progress)
 
         try:
-            # Step 1: 데이터 수집 (Blocking I/O -> Thread)
+            # ===== Step 1: 데이터 수집 =====
+            log_stage_start("Step 1: 데이터 수집", "YouTube, 네이버, 시장 트렌드 분석")
+            log_input_data("제품명", product.get("name"))
+            log_input_data("카테고리", product.get("category"))
+
             update_progress(PipelineStep.DATA_COLLECTION, "데이터 수집 시작")
             collected_data = await asyncio.to_thread(
                 self._collector.collect_all_data,
@@ -129,7 +155,15 @@ class PipelineService:
                 progress_callback=update_progress,
             )
 
-            # Step 2: 마케팅 전략 생성 (Blocking I/O -> Thread)
+            # 수집 결과 로깅
+            log_output_data("YouTube 동영상 수집", f"{len(collected_data.youtube_videos)}개")
+            log_output_data("핵심 인사이트", f"{len(collected_data.top_insights or [])}개")
+            log_stage_end("Step 1: 데이터 수집", f"총 {len(collected_data.youtube_videos)}개 데이터 수집")
+
+            # ===== Step 2: 마케팅 전략 생성 =====
+            log_stage_start("Step 2: 마케팅 전략 생성", "AI 기반 전략 분석")
+            log_input_data("수집된 인사이트", collected_data.top_insights[:3] if collected_data.top_insights else [])
+
             update_progress(PipelineStep.STRATEGY_GENERATION, "마케팅 전략 생성 중...")
             record_prompt("marketing.analysis")
             strategy = await asyncio.to_thread(
@@ -138,10 +172,20 @@ class PipelineService:
                 collected_data=collected_data,
             )
 
-            # Step 3, 4, 2.1: Parallel Execution for Content Generation
-            # Define wrapper functions for independent tasks
+            # 전략 결과 로깅
+            log_output_data("훅 문구 제안", strategy.get("hook_suggestions", [])[:3])
+            log_output_data("타겟 오디언스", strategy.get("target_audience", "N/A"))
+            log_output_data("추천 스타일", strategy.get("style", "N/A"))
+            log_stage_end("Step 2: 마케팅 전략 생성", f"훅 {len(strategy.get('hook_suggestions', []))}개 생성")
+
+            # ===== Step 3-5: 병렬 콘텐츠 생성 =====
+            log_stage_start("Step 3-5: 콘텐츠 병렬 생성", "SNS 포스팅 + 썸네일 + 비디오 동시 생성")
+
             async def run_social():
                 if config.generate_social:
+                    log_info("    🔹 [SNS 포스팅] 생성 시작...")
+                    log_input_data("SNS - 제품", product.get("name"))
+                    log_input_data("SNS - 인사이트 수", len(collected_data.top_insights or []))
                     update_progress(
                         PipelineStep.SOCIAL_GENERATION, "SNS 포스팅 생성 중..."
                     )
@@ -153,13 +197,17 @@ class PipelineService:
                             top_insights=collected_data.top_insights,
                         )
                         strategy["social_posts"] = posts
-                        log_info("SNS 포스팅 생성 완료")
+                        log_output_data("SNS - 생성된 포스팅 수", len(posts) if posts else 0)
+                        log_info("    ✅ [SNS 포스팅] 생성 완료")
                     except Exception as e:
-                        logger.error(f"SNS 포스팅 생성 실패: {e}")
-                        log_error(f"SNS 포스팅 생성 중 오류 발생: {e}")
+                        log_error(f"    ❌ [SNS 포스팅] 생성 실패: {e}")
+                        log_stage_fail("SNS 포스팅 생성", str(e))
 
             async def run_thumbnail():
                 if config.generate_thumbnail:
+                    log_info("    🔹 [썸네일] 생성 시작...")
+                    log_input_data("썸네일 - 멀티 생성 모드", config.generate_multi_thumbnails)
+                    log_input_data("썸네일 - 생성 개수", config.thumbnail_count)
                     update_progress(
                         PipelineStep.THUMBNAIL_CREATION, "썸네일 생성 중..."
                     )
@@ -171,6 +219,7 @@ class PipelineService:
                             n = min(config.thumbnail_count, len(all_styles))
                             styles = random.sample(all_styles, n)
 
+                        log_input_data("썸네일 - 선택된 스타일", styles)
                         thumbnails = await asyncio.to_thread(
                             self._thumbnail.generate_from_strategy,
                             product=product,
@@ -183,20 +232,30 @@ class PipelineService:
                             generated_content.thumbnail_data = thumbnails[0].get(
                                 "image"
                             )
+                        log_output_data("썸네일 - 생성 완료", f"{len(thumbnails or [])}개")
                     else:
                         hooks = strategy.get("hook_suggestions", [])
-                        hook_text = (
-                            hooks[0] if hooks else f"{product.get('name', '제품')}!"
-                        )
+                        # 훅 텍스트 안전 추출 (Dict/Str 처리)
+                        first_hook = hooks[0] if hooks else None
+                        if isinstance(first_hook, dict):
+                            hook_text = first_hook.get("hook", f"{product.get('name', '제품')}!")
+                        else:
+                            hook_text = str(first_hook) if first_hook else f"{product.get('name', '제품')}!"
+                        log_input_data("썸네일 - 훅 텍스트", hook_text)
                         thumbnail = await asyncio.to_thread(
                             self._thumbnail.generate,
                             product=product,
                             hook_text=hook_text,
                         )
                         generated_content.thumbnail_data = thumbnail
+                        log_output_data("썸네일 - 이미지 크기", f"{len(thumbnail or b'')} bytes")
+                    log_info("    ✅ [썸네일] 생성 완료")
 
             async def run_video():
                 if config.generate_video:
+                    log_info("    🔹 [비디오] 생성 시작...")
+                    log_input_data("비디오 - 길이", f"{config.video_duration}초")
+                    log_input_data("비디오 - 듀얼 페이즈 모드", config.video_dual_phase_beta)
                     update_progress(PipelineStep.VIDEO_GENERATION, "비디오 생성 중...")
                     video_mode = "single"
                     phase2_prompt = None
@@ -211,6 +270,7 @@ class PipelineService:
                             f"{category} on a clean studio background. "
                             "Soft light leaks, slow zoom in, subtle CTA text."
                         )
+                        log_input_data("비디오 - Phase2 프롬프트", phase2_prompt[:50])
 
                     video_result = await asyncio.to_thread(
                         self._video.generate_marketing_video,
@@ -224,14 +284,19 @@ class PipelineService:
 
                     if isinstance(video_result, bytes):
                         generated_content.video_bytes = video_result
+                        log_output_data("비디오 - 파일 크기", f"{len(video_result):,} bytes")
                     else:
                         generated_content.video_url = video_result
+                        log_output_data("비디오 - GCS URL", video_result[:80] if video_result else "N/A")
+                    log_info("    ✅ [비디오] 생성 완료")
 
             # Run parallel tasks
             await asyncio.gather(run_social(), run_thumbnail(), run_video())
+            log_stage_end("Step 3-5: 콘텐츠 병렬 생성", "모든 콘텐츠 생성 완료")
 
-            # Step 5: Upload (optional)
+            # ===== Step 6: GCS 업로드 =====
             if upload_enabled:
+                log_stage_start("Step 6: GCS 업로드", "생성된 콘텐츠를 클라우드에 저장")
                 update_progress(PipelineStep.UPLOAD, "Uploading to GCS...")
                 upload_status, upload_errors = await asyncio.to_thread(
                     self._upload_to_gcs,
@@ -241,14 +306,32 @@ class PipelineService:
                     strategy=strategy,
                     generated_content=generated_content,
                 )
+                log_output_data("업로드 상태", upload_status.value if hasattr(upload_status, 'value') else upload_status)
+                if upload_errors:
+                    log_output_data("업로드 오류", upload_errors)
+                log_stage_end("Step 6: GCS 업로드", f"상태: {upload_status}")
 
-            # 완료
+            # ===== 🎉 파이프라인 완료 - 최종 요약 =====
             update_progress(PipelineStep.COMPLETED, "파이프라인 완료!")
             duration = time.time() - start_time
             self._last_duration = duration
 
+            # 최종 요약 박스 출력
+            summary_items = [
+                f"✅ 제품: {product.get('name', 'N/A')}",
+                f"📊 수집된 데이터: YouTube {len(collected_data.youtube_videos or [])}개",
+                f"💡 생성된 훅 문구: {len(strategy.get('hook_suggestions', []))}개",
+                f"🖼️ 썸네일: {'생성됨' if generated_content.thumbnail_data else '건너뜀'}",
+                f"🎬 비디오: {'생성됨' if generated_content.video_bytes or generated_content.video_url else '건너뜀'}",
+                f"📱 SNS 포스팅: {len(strategy.get('social_posts', []))}개",
+                f"☁️ GCS 업로드: {upload_status}",
+                f"⏱️ 총 소요 시간: {duration:.2f}초",
+            ]
+            log_summary_box("파이프라인 실행 결과 요약", summary_items)
+
             log_success(f"파이프라인 실행 완료 (소요 시간: {duration:.2f}초)")
             log_timing("Pipeline Execution", duration * 1000)
+            log_separator("double")
 
             result = PipelineResult(
                 success=True,
@@ -268,9 +351,9 @@ class PipelineService:
             # 히스토리 저장
             try:
                 save_path = await asyncio.to_thread(self._history.save_result, result)
-                log_info(f"파이프라인 결과 저장 완료: {save_path}")
+                log_info(f"    💾 히스토리 저장: {save_path}")
             except Exception as e:
-                logger.error(f"파이프라인 결과 저장 실패: {e}")
+                log_error(f"    ⚠️ 히스토리 저장 실패: {e}")
 
 
             if self._rag_ingestion:
@@ -284,10 +367,22 @@ class PipelineService:
             return result
 
         except Exception as e:
-            logger.error(f"파이프라인 실행 실패: {e}")
+            # ===== ❌ 파이프라인 실패 =====
+            log_stage_fail("파이프라인 실행", str(e))
+            log_error(f"    ⚠️ 오류 상세: {type(e).__name__}: {e}")
             update_progress(PipelineStep.FAILED, str(e))
             duration = time.time() - start_time
             self._last_duration = duration
+
+            # 실패 요약
+            summary_items = [
+                f"❌ 제품: {product.get('name', 'N/A')}",
+                f"⚠️ 오류 유형: {type(e).__name__}",
+                f"📝 오류 메시지: {str(e)[:80]}",
+                f"⏱️ 실패까지 소요 시간: {duration:.2f}초",
+            ]
+            log_summary_box("파이프라인 실패 요약", summary_items)
+            log_separator("double")
 
             result = PipelineResult(
                 success=False,
@@ -308,8 +403,9 @@ class PipelineService:
             # 실패 결과도 저장
             try:
                 self._history.save_result(result)
-            except Exception as e:
-                log_error(f"파이프라인 실패 결과 저장 실패: {e}")
+                log_info("    💾 실패 기록 저장 완료")
+            except Exception as save_err:
+                log_error(f"    ⚠️ 실패 기록 저장 실패: {save_err}")
 
             return result
 

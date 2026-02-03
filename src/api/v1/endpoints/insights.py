@@ -16,6 +16,7 @@ from schemas.requests import (
     DailyReportRequest,
     InsightUploadRequest,
     NaverInsightBatchRequest,
+    YouTubeInsightBatchRequest,
 )
 
 router = APIRouter()
@@ -134,6 +135,72 @@ async def ingest_naver_insights(
         await record_audit_log(
             session=session,
             action="insights.naver_ingest_failed",
+            actor_email=getattr(user, "email", "unknown"),
+            actor_role=getattr(user, "role", "editor"),
+            entity_type="insight",
+            metadata={
+                "query": request.query,
+                "items": result.get("items"),
+                "ingested": result.get("ingested"),
+                "reason": "ingested_zero",
+            },
+        )
+    return result
+
+
+@router.post("/insights/external/youtube")
+async def ingest_youtube_insights(
+    request: YouTubeInsightBatchRequest,
+    user: Annotated[CurrentUser, Depends(require_role(["admin", "editor"]))],
+    session: Annotated[Any, Depends(get_db_session)],
+):
+    services = get_services()
+    meta = {
+        "campaign_name": request.campaign_name,
+        "channel": request.channel,
+        "region": request.region,
+        "period_start": request.period_start,
+        "period_end": request.period_end,
+    }
+    try:
+        result = await asyncio.to_thread(
+            services.insight_external_service.ingest_youtube,
+            request.query,
+            request.max_results,
+            request.include_comments,
+            meta,
+            user,
+        )
+    except Exception as exc:
+        await record_audit_log(
+            session=session,
+            action="insights.youtube_ingest_failed",
+            actor_email=getattr(user, "email", "unknown"),
+            actor_role=getattr(user, "role", "editor"),
+            entity_type="insight",
+            metadata={
+                "query": request.query,
+                "error": str(exc),
+            },
+        )
+        raise HTTPException(status_code=500, detail="YouTube ingest failed.") from exc
+    await record_audit_log(
+        session=session,
+        action="insights.youtube_ingest",
+        actor_email=getattr(user, "email", "unknown"),
+        actor_role=getattr(user, "role", "editor"),
+        entity_type="insight",
+        metadata={
+            "query": request.query,
+            "items": result.get("items"),
+            "ingested": result.get("ingested"),
+            "videos": result.get("videos"),
+        },
+    )
+    if (result.get("items", 0) or 0) > 0 and (result.get("ingested", 0) or 0) == 0:
+        await record_audit_log(
+            session=session,
+            action="insights.youtube_ingest_failed",
             actor_email=getattr(user, "email", "unknown"),
             actor_role=getattr(user, "role", "editor"),
             entity_type="insight",

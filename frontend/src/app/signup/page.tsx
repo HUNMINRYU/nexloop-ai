@@ -5,6 +5,21 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signup } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
+import { useAuthStore } from '@/store/useAuthStore';
+
+// JWT 토큰에서 payload 디코딩
+const decodeJwtPayload = (token: string) => {
+    try {
+        const payload = token.split('.')[1];
+        if (!payload) return null;
+        const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+        const json = atob(padded);
+        return JSON.parse(json);
+    } catch {
+        return null;
+    }
+};
 
 export default function SignUpPage() {
     const [formData, setFormData] = useState({
@@ -18,6 +33,7 @@ export default function SignUpPage() {
     const [message, setMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
+    const { setAuth } = useAuthStore();
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -28,15 +44,28 @@ export default function SignUpPage() {
             setMessage('Name, Email and Password are required.');
             return;
         }
-        
+
         setIsLoading(true);
         setMessage('');
         try {
             const response = await signup(formData);
-            sessionStorage.setItem('auth_token', response.token);
-            router.push('/login');
-        } catch (error: any) {
-            setMessage(error.message || '가입 실패');
+
+            // JWT 토큰에서 사용자 정보 추출
+            const payload = decodeJwtPayload(response.token);
+            const userEmail = payload?.sub ?? formData.email;
+            const userRole = payload?.role ?? 'editor';
+
+            // Zustand store를 통해 토큰 저장
+            setAuth({
+                token: response.token,
+                email: userEmail,
+                role: userRole,
+            });
+
+            router.push('/');
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : '가입 실패';
+            setMessage(errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -47,15 +76,26 @@ export default function SignUpPage() {
             {/* Animated Background Elements */}
             <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#0ca678]/5 blur-[120px] rounded-full animate-pulse" />
             <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#6366f1]/5 blur-[120px] rounded-full animate-pulse" />
-            
+
             {/* Header Area */}
             <div className="absolute top-0 left-0 right-0 px-4 py-3 sm:px-6 sm:py-4 md:px-10 md:py-6 flex justify-between items-center z-50">
-                <Link href="/" className="text-lg sm:text-xl md:text-2xl font-black tracking-tighter flex items-center gap-1.5 sm:gap-2 group">
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-[#0ca678] to-[#6366f1] rounded-lg flex items-center justify-center text-white text-xs transform group-hover:rotate-12 transition-transform">N</div>
+                <Link
+                    href="/"
+                    className="text-lg sm:text-xl md:text-2xl font-black tracking-tighter flex items-center gap-1.5 sm:gap-2 group"
+                >
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-[#0ca678] to-[#6366f1] rounded-lg flex items-center justify-center text-white text-xs transform group-hover:rotate-12 transition-transform">
+                        N
+                    </div>
                     <span className="text-slate-900 group-hover:text-[#0ca678] transition-colors">NEXLOOP</span>
                 </Link>
-                <Button asChild variant="ghost" className="text-slate-500 hover:text-slate-900 font-bold text-xs sm:text-sm md:text-base px-2 sm:px-3">
-                    <Link href="/login"><span className="hidden sm:inline">Already have an account?</span> Log In</Link>
+                <Button
+                    asChild
+                    variant="ghost"
+                    className="text-slate-500 hover:text-slate-900 font-bold text-xs sm:text-sm md:text-base px-2 sm:px-3"
+                >
+                    <Link href="/login">
+                        <span className="hidden sm:inline">Already have an account?</span> Log In
+                    </Link>
                 </Button>
             </div>
 
@@ -64,13 +104,17 @@ export default function SignUpPage() {
                 <div className="bg-white/80 backdrop-blur-2xl border border-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-[40px] overflow-hidden">
                     <div className="p-8 md:p-12">
                         <div className="text-center mb-10">
-                            <h1 className="text-4xl font-black text-slate-900 mb-3 tracking-tight">Create your account</h1>
+                            <h1 className="text-4xl font-black text-slate-900 mb-3 tracking-tight">
+                                Create your account
+                            </h1>
                             <p className="text-slate-500 font-medium">Start your journey with Nexloop automation.</p>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Full Name</label>
+                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">
+                                    Full Name
+                                </label>
                                 <input
                                     name="name"
                                     type="text"
@@ -81,7 +125,9 @@ export default function SignUpPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Email Address</label>
+                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">
+                                    Email Address
+                                </label>
                                 <input
                                     name="email"
                                     type="email"
@@ -92,7 +138,9 @@ export default function SignUpPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Company Name</label>
+                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">
+                                    Company Name
+                                </label>
                                 <input
                                     name="team_name"
                                     type="text"
@@ -103,7 +151,9 @@ export default function SignUpPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Job Title</label>
+                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">
+                                    Job Title
+                                </label>
                                 <input
                                     name="job_title"
                                     type="text"
@@ -114,7 +164,9 @@ export default function SignUpPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Phone Number</label>
+                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">
+                                    Phone Number
+                                </label>
                                 <input
                                     name="phone_number"
                                     type="tel"
@@ -125,7 +177,9 @@ export default function SignUpPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Password</label>
+                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">
+                                    Password
+                                </label>
                                 <input
                                     name="password"
                                     type="password"
@@ -153,11 +207,24 @@ export default function SignUpPage() {
 
                         <div className="text-center">
                             <p className="text-xs font-medium text-slate-400 max-w-sm mx-auto leading-relaxed">
-                                By signing up, you agree to our <a href="#" className="text-slate-900 underline underline-offset-4 decoration-slate-200 hover:decoration-slate-900 transition-colors">Terms of Service</a> and <a href="#" className="text-slate-900 underline underline-offset-4 decoration-slate-200 hover:decoration-slate-900 transition-colors">Privacy Policy</a>
+                                By signing up, you agree to our{' '}
+                                <a
+                                    href="#"
+                                    className="text-slate-900 underline underline-offset-4 decoration-slate-200 hover:decoration-slate-900 transition-colors"
+                                >
+                                    Terms of Service
+                                </a>{' '}
+                                and{' '}
+                                <a
+                                    href="#"
+                                    className="text-slate-900 underline underline-offset-4 decoration-slate-200 hover:decoration-slate-900 transition-colors"
+                                >
+                                    Privacy Policy
+                                </a>
                             </p>
                         </div>
                     </div>
-                    
+
                     {/* Social Auth Footer */}
                     <div className="bg-slate-50/50 p-8 border-t border-slate-100 flex flex-col md:flex-row items-center justify-center gap-4">
                         <button className="flex items-center justify-center gap-3 px-6 h-12 bg-white border border-slate-100 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm w-full md:w-auto">

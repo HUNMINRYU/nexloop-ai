@@ -260,6 +260,55 @@ class CTRPredictor:
 
         return recommendations
 
+    def predict_with_pipeline_insights(
+        self,
+        title: str,
+        thumbnail_description: str = "",
+        pipeline_insights: Optional[list[dict]] = None,
+        category: str = "general",
+    ) -> dict:
+        """
+        파이프라인 결과(top insights)를 CTR 예측에 반영.
+        adjusted_ctr = base_ctr * (1 + Σ(weight_i × signal_i))
+        """
+        basic = self.predict_ctr(title, thumbnail_description, category=category)
+
+        if not pipeline_insights:
+            return basic
+
+        # 파이프라인 insight에서 시그널 추출 및 가중치 적용
+        signal_weights = {
+            "purchase_intent": 0.15,
+            "viral_potential": 0.10,
+            "share_probability": 0.08,
+            "reply_inducing": 0.05,
+            "bookmark_worthy": 0.07,
+            "constructive_feedback": 0.05,
+        }
+
+        adjustment = 0.0
+        signal_details = {}
+        for insight in pipeline_insights:
+            features = insight.get("features", {})
+            for signal_name, weight in signal_weights.items():
+                value = features.get(signal_name, 0.0)
+                if value > 0:
+                    contribution = weight * value
+                    adjustment += contribution
+                    signal_details[signal_name] = round(contribution, 4)
+
+        # 조정 범위 제한 (-30% ~ +50%)
+        adjustment = max(-0.3, min(0.5, adjustment))
+
+        adjusted_ctr = basic["predicted_ctr"] * (1 + adjustment)
+        adjusted_ctr = max(1.0, min(20.0, adjusted_ctr))  # 합리적 범위 제한
+
+        basic["pipeline_adjusted_ctr"] = round(adjusted_ctr, 2)
+        basic["pipeline_adjustment"] = round(adjustment * 100, 1)
+        basic["pipeline_signals"] = signal_details
+
+        return basic
+
     def compare_variations(self, variations: list[dict]) -> list[dict]:
         """
         여러 버전의 제목/썸네일 비교

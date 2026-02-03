@@ -1,31 +1,20 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import React, { useMemo } from 'react';
 import { ToastProvider } from '@/components/ui';
 import ChatbotWidget from '@/components/ChatbotWidget';
 import AuthGate from '@/components/AuthGate';
 
-import QueryProvider from '@/providers/QueryProvider';
-
 export default function Providers({ children }: { children: React.ReactNode }) {
-  const [showChatbot, setShowChatbot] = useState(false);
-  const pathname = usePathname();
+    // useEffect 없이 선언적으로 항상 표시하도록 수정 (필요 시 특정 경로 제외 로직 추가 가능)
+    const showChatbot = true;
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    // Always show chatbot for all users (authenticated and non-authenticated)
-    setShowChatbot(true);
-  }, [pathname]);
-
-  return (
-    <QueryProvider>
-      <ToastProvider>
-        <AuthGate>
-          {children}
-          {showChatbot && <ChatbotWidget />}
-        </AuthGate>
-      </ToastProvider>
-    </QueryProvider>
-  );
+    return (
+        <ToastProvider>
+            <AuthGate>
+                {children}
+                {showChatbot && <ChatbotWidget />}
+            </AuthGate>
+        </ToastProvider>
+    );
 }

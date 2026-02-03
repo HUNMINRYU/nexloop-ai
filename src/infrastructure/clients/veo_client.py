@@ -703,6 +703,13 @@ class VeoClient:
                 blob = bucket.blob(blob_path)
                 video_content = blob.download_as_bytes()
 
+                # 임시 파일 삭제 (Clean up)
+                try:
+                    blob.delete()
+                    logger.info(f"임시 비디오 파일 삭제 완료: {video_uri}")
+                except Exception as del_err:
+                    logger.warning(f"임시 비디오 파일 삭제 실패 (무시됨): {del_err}")
+
                 log_timing("Video Download", (time.time() - download_start) * 1000)
 
                 if progress_callback:

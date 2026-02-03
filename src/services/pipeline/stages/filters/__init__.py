@@ -1,6 +1,7 @@
 from .age_filter import AgeFilter
 from .author_block_filter import AuthorBlockFilter
 from .composite_filter import CompositeFilter
+from .conversation_dedup_filter import ConversationDedupFilter
 from .duplicate_filter import DuplicateFilter
 from .muted_keyword_filter import MutedKeywordFilter
 from .previously_seen_filter import PreviouslySeenFilter
@@ -10,6 +11,7 @@ __all__ = [
     "AgeFilter",
     "AuthorBlockFilter",
     "CompositeFilter",
+    "ConversationDedupFilter",
     "DuplicateFilter",
     "MutedKeywordFilter",
     "PreviouslySeenFilter",
