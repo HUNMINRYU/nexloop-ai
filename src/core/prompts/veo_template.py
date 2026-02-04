@@ -5,70 +5,43 @@ Google Veo 3.1 Prompt Templates & Protocols
 # System Instructions for Gemini to act as Prompt Engineer
 VEO_SYSTEM_PROMPT = """
 ### 🤖 Role & Persona
-You are a **Google Veo 3.1 Expert Video Prompt Engineer**.
-Your goal is to design the optimal structure for Veo 3.1 to generate safe, high-quality videos without refusal.
+You are a **Senior Cinematic Director & Veo 3.1 Prompt Specialist**.
+Your goal is to transform marketing hooks into visually stunning, photorealistic, and cinematic video descriptions.
 
-### ⚠️ Critical Safety & Stability Rules
-1. **Generic Subjects:** NEVER use specific celebrity names, real people's names, or specific trademark names (Nike, iPhone, etc.) in visual descriptions. Generalize them (e.g., 'A generic smartphone', 'A man', 'A professional athlete').
-2. **Safe Content:** NO violence, sexual content, or hate speech.
-3. **Language Protocol:**
-   - **Video Descriptions:** MUST be in **English**.
-   - **Dialogue/Text:** Keep user's requested language.
+### ⚠️ Critical Directives (Quality & Safety)
+1. **Directorial Style:** Write cohesive, descriptive paragraphs. Do not just list features. Focus on lighting, camera movement (e.g., "dolly focus-in on a 85mm lens"), and atmospheric texture.
+2. **Text-Free Zone:** AI video models struggle with text. Therefore, **Omit all on-screen text, logos, or watermarks** from the visual description. The video should tell the story through pure visual and audio elements.
+3. **Generic Subjects:** Use general terms for brands/people (e.g., 'A premium glass bottle', 'An elegant athlete').
+4. **Cinematic Sound:** Describe rich audio-visual synchrony (e.g., "The crisp snap of a twig follows the camera's sudden pivot").
 
-### ✅ Safety Checklist (must pass before output)
-- No real person names or identifiable public figures
-- No explicit brands, logos, or trademarked products
-- No sexual, NSFW, or exploitative content
-- No graphic violence, gore, or hate content
-- Avoid minors in unsafe contexts
-### 📝 Output Format
-You must output a structured prompt following the templates below.
-Do not explain your reasoning, just provide the final prompt text ready for Veo.
+### ✅ Negative Design Protocol
+Always include: 'text, watermark, font, typography, subtitles, branding, blurry, low resolution, morphing, distorted artifacts' in the conceptual negative space.
 """
 
-# Option 1: Dual Phase (Extension)
+# Option 1: Dual Phase (Extension Strategy)
 TEMPLATE_DUAL_PHASE = """
-# Phase 1: The Core Action (0s-8s)
-1. **Scene:** {scene}
-2. **Subject:** {subject}
-3. **Talent/POV:** {pov}
-4. **Shot/Motion:** 9:16 Vertical. {motion}
-5. **Action Breakdown:**
-   - 0-2s (Hook): {action_hook}
-   - 2-5s (Process): {action_process}
-   - 5-8s (Peak): {action_peak}
-6. **Composition:** Center Focus (Safe Zone optimized)
-7. **Lighting:** {lighting}
-8. **Style:** {style}, 4k, High Fidelity
-9. **Sound:** {sound}
-10. **Voice-over:** "{voice_over}"
-11. **Negative Prompt:** text, watermark, bad quality, morphing.
+[Directorial Script: Phase 1 (0s-8s)]
+SCENE: {scene}.
+SHOT: 9:16 Vertical. A {motion} shot using a cinematic lens with professional depth of field. 
+VISUALS: The {subject} is the primary focus. {action_hook}. As the scene progresses, {action_process} lead to a peak moment of {action_peak}. 
+LIGHTING: {lighting} with professional color grading ({style}).
+ATMOSPHERE: Photorealistic, 4k High Fidelity. No on-screen text or watermarks.
+SOUND: {sound}. {voice_over}
 
-# Phase 2: The Brand Stamp (Extension: 8s-12s)
-*Init Image: Last frame of Phase 1*
-1. **Action:** Freeze frame aesthetic. Subtle light leaks.
-2. **Subject:** Product Hero Shot (Static).
-3. **Camera:** Static / Slow Zoom In.
-4. **Voice-over:** "{brand_voice_over}"
-5. **Text Overlay:** "{brand_text}"
+[Directorial Script: Phase 2 (Extension 8s-12s)]
+*Init Image: Continuity from Phase 1*
+ACTION: A smooth transition to a freeze-frame aesthetic with subtle lens flares. The {subject} is showcased in a hero-shot position. {brand_voice_over}.
 """
 
 # Option 2: Single Phase (Standard)
 TEMPLATE_SINGLE_PHASE = """
-# Single Phase: The Complete Shot (0s-8s)
-1. **Scene:** {scene}
-2. **Subject:** {subject}
-3. **Talent/POV:** {pov}
-4. **Shot/Motion:** 9:16 Vertical. {motion}
-5. **Action Breakdown:**
-   - 0-4s: {action_start}
-   - 4-8s: {action_end}
-6. **Composition:** Center Focus
-7. **Lighting:** {lighting}
-8. **Style:** {style}, Photorealistic
-9. **Sound:** {sound}
-10. **Voice-over:** "{voice_over}"
-11. **Negative Prompt:** text, subtitles, watermark, specific logos, blurry, distorted, morphing.
+[Directorial Script: Standard Shot (0s-8s)]
+A 9:16 vertical cinematic shot featuring {subject} in a {scene} setting. 
+CAMERA: {motion} framing with {style} aesthetic. 
+ACTION: {action_start} transitioning smoothly into {action_end}. 
+LIGHTING/MOOD: {lighting} creating a professional brand atmosphere. 
+TECHNICAL: Photorealistic details, 4k resolution. ZERO text, watermarks, or overlays.
+AUDIO: {sound}. Voice-over: "{voice_over}"
 """
 
 

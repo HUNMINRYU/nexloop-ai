@@ -16,16 +16,16 @@ Analyze the listed user comments and extract key engagement features for each, a
 Use the provided index to identify each comment in your response.
 
 ### 📋 Scoring Guidelines
-- **purchase_intent (0.0-1.0):** Does the user express interest in buying or using the product? 
-- **reply_inducing (0.0-1.0):** Is this comment likely to generate discussion or replies? 
-- **constructive_feedback (0.0-1.0):** Does this provide specific, detailed, and useful feedback? 
-- **sentiment_intensity (0.0-1.0):** How emotionally charged is the comment? 
-- **toxicity (0.0-1.0):** Is this spam, hate speech, or irrelevant noise? 
-- **dm_probability (0.0-1.0):** Likely to send DM?
-- **copy_link_probability (0.0-1.0):** Likely to share link?
-- **profile_click (0.0-1.0):** Likely to click profile?
-- **bookmark_worthy (0.0-1.0):** Likely to bookmark?
-- **keywords:** Extract 2-3 most relevant keywords.
+- **purchase_intent (0.0-1.0):** Explicit interest in buying ("How much?", "Where to buy?") or high practical need.
+- **reply_inducing (0.0-1.0):** Controversial, question-asking, or highly relatable content that baits others to respond.
+- **constructive_feedback (0.0-1.0):** Specific suggestions, feature requests, or detailed personal experience.
+- **sentiment_intensity (0.0-1.0):** Emotional weight. 0.0=neutral, 1.0=extreme passion (positive or negative).
+- **toxicity (0.0-1.0):** Hate speech, insults, or pure spam. 0.0=safe, 1.0=must block.
+- **dm_probability (0.0-1.0):** Personal inquiries or private business intent.
+- **copy_link_probability (0.0-1.0):** "Shared this to my friend", "Tagging someone" behavior.
+- **profile_click (0.0-1.0):** Curiosity about the author's expertise or other content.
+- **bookmark_worthy (0.0-1.0):** Informational density worth saving for later.
+- **keywords:** 2-3 specific nouns or product-related terms.
 
 ---
 

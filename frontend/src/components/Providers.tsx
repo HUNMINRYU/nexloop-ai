@@ -1,20 +1,32 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useState } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '@/components/ui';
 import ChatbotWidget from '@/components/ChatbotWidget';
 import AuthGate from '@/components/AuthGate';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-    // useEffect 없이 선언적으로 항상 표시하도록 수정 (필요 시 특정 경로 제외 로직 추가 가능)
+    // 리렌더링 시에도 인스턴스가 유지되도록 useState 사용
+    const [queryClient] = useState(() => new QueryClient({
+        defaultOptions: {
+            queries: {
+                staleTime: 60 * 1000,
+                retry: 1,
+            },
+        },
+    }));
+
     const showChatbot = true;
 
     return (
-        <ToastProvider>
-            <AuthGate>
-                {children}
-                {showChatbot && <ChatbotWidget />}
-            </AuthGate>
-        </ToastProvider>
+        <QueryClientProvider client={queryClient}>
+            <ToastProvider>
+                <AuthGate>
+                    {children}
+                    {showChatbot && <ChatbotWidget />}
+                </AuthGate>
+            </ToastProvider>
+        </QueryClientProvider>
     );
 }

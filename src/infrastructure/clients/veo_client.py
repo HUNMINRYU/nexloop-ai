@@ -5,9 +5,9 @@ Vertex AI Veo 3.1 기반 마케팅 비디오 생성
 
 import re
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Callable, Optional
 
 from config.constants import CAMERA_MOTIONS
 from core.exceptions import VeoAPIError
@@ -251,48 +251,51 @@ class AdvancedPromptBuilder:
     duration: int = 8
 
     def build(self) -> str:
-        """최종 프롬프트 생성"""
-        # 메인 장면 구성
-        scene_parts = []
+        """최종 프롬프트 생성 (Directorial Paragraph 형식)"""
+        parts = []
 
-        # 1. 주제 + 환경
+        # 1. 메인 비주얼 구성 (주제 + 동작 + 환경)
+        main_visual = ""
         if self.subject:
-            subject_line = self.subject
+            main_visual = f"A {self.style or 'cinematic'} shot of a {self.subject}"
             if self.environment:
-                subject_line += f" in {self.environment}"
-            scene_parts.append(subject_line + ".")
+                main_visual += f" in a {self.environment}"
+            if self.action:
+                main_visual += f", {self.action}"
 
-        # 2. 동작
-        if self.action:
-            scene_parts.append(self.action + ".")
+        if main_visual:
+            parts.append(main_visual + ".")
 
-        # 3. 스타일
-        if self.style:
-            scene_parts.append(f"Style: {self.style}.")
-
-        # 4. 카메라 모션 + 구도
+        # 2. 카메라 및 구도
         camera_prompt = CAMERA_MOVEMENTS.get(self.camera_movement, {}).get(
             "prompt", "static shot"
         )
         comp_prompt = COMPOSITIONS.get(self.composition, {}).get(
             "prompt", "medium shot"
         )
-        scene_parts.append(f"Camera: {camera_prompt}, {comp_prompt} framing.")
+        parts.append(
+            f"The camera performs a {camera_prompt} with {comp_prompt} framing."
+        )
 
-        # 5. 조명/분위기
+        # 3. 조명 및 기술 디테일
         mood_prompt = LIGHTING_MOODS.get(self.lighting_mood, {}).get(
             "prompt", "natural lighting"
         )
-        scene_parts.append(f"Lighting: {mood_prompt}.")
+        parts.append(
+            f"Lighting is {mood_prompt}, optimized for 4k photorealistic fidelity."
+        )
+
+        # 4. 텍스트 방지 강조
+        parts.append("ZERO text, no watermarks, no typography on screen.")
 
         # 오디오 섹션
         audio_section = self._build_audio_section()
 
-        # 최종 조합
-        main_prompt = "\n".join(scene_parts)
+        # 최종 서술형 조합
+        main_prompt = " ".join(parts)
 
         if audio_section:
-            main_prompt += f"\n\nAUDIO:\n{audio_section}"
+            main_prompt += f"\n\n[AUDIO INTENT]\n{audio_section}"
 
         return main_prompt
 
@@ -321,13 +324,21 @@ class AdvancedPromptBuilder:
         return "\n".join(audio_parts)
 
     def with_product(
-        self, product_name: str, category: str = ""
+        self, product_name: str, description: str = "", category: str = ""
     ) -> "AdvancedPromptBuilder":
         """제품 촬영용 설정"""
         self.subject = f"A premium {product_name}"
         if category:
-            self.subject += f" ({category} product)"
-        self.environment = "modern minimalist studio with clean backdrop"
+            self.subject += f" ({category})"
+
+        # 설명이 있으면 환경이나 피사체 상세 정보로 활용
+        if description:
+            self.environment = (
+                f"professional product photography setting reflecting: {description}"
+            )
+        else:
+            self.environment = "modern minimalist studio with clean backdrop"
+
         self.lighting_mood = "studio"
         return self
 
@@ -436,12 +447,13 @@ class VeoClient:
         pattern = r"\b(" + "|".join(map(re.escape, blocked_terms)) + r")\b"
         if re.search(pattern, prompt, flags=re.IGNORECASE):
             raise VeoAPIError("Unsafe prompt content detected. Please revise.")
+
     def generate_video(
         self,
         prompt: str,
         duration_seconds: int = 8,
         resolution: str = "1080p",  # 품질 개선: 720p → 1080p
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> bytes | str:
         """텍스트 프롬프트로 비디오 생성"""
         log_api_start(
@@ -474,7 +486,7 @@ class VeoClient:
                     generate_audio=True,
                     number_of_videos=1,
                     resolution=resolution,
-                    negative_prompt="watermarks, text overlays, subtitles, blurry, low quality, distorted, morphing, flickering, jittery, shaky, nsfw, violence, deformed, ugly, bad anatomy, unnatural motion",
+                    negative_prompt="text, watermark, typography, subtitles, logos, blurry, low quality, distorted, morphing, flickering, jittery, shaky, nsfw, violence, deformed, ugly, bad anatomy, unnatural motion, symbols, letters, numbers, static text",
                     person_generation="allow_adult",
                 ),
             )
@@ -489,14 +501,14 @@ class VeoClient:
 
         except Exception as e:
             log_error(f"비디오 생성 실패: {e}")
-            raise VeoAPIError(f"비디오 생성 실패: {e}")
+            raise VeoAPIError(f"비디오 생성 실패: {e}") from e
 
     def generate_video_from_image(
         self,
         image_bytes: bytes,
         prompt: str,
         duration_seconds: int = 8,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> bytes | None:
         """이미지 기반 비디오 생성 (Image-to-Video)"""
         log_api_start("Veo I2V Generation", f"Duration: {duration_seconds}s")
@@ -517,7 +529,7 @@ class VeoClient:
                 image = Image.open(io.BytesIO(image_bytes))
             except Exception as img_err:
                 log_error(f"이미지 처리 오류: {img_err}")
-                raise VeoAPIError("유효하지 않은 이미지 데이터입니다.")
+                raise VeoAPIError("유효하지 않은 이미지 데이터입니다.") from img_err
 
             date_str = datetime.now().strftime("%Y%m%d")
             output_gcs_uri = f"gs://{self._gcs_bucket_name}/videos_i2v/{date_str}/"
@@ -530,7 +542,9 @@ class VeoClient:
 
             TRANSITION: Start from the provided image and naturally animate the scene.
             CAMERA: Smooth cinematic motion.
-            NEGATIVE PROMPT: morphing, structural distortion, blurry, text artifacts.
+            QUALITY: 4k photorealistic, high fidelity.
+            RESTRICTION: ZERO text, no watermarks, no typography on screen.
+            NEGATIVE PROMPT: morphing, structural distortion, blurry, text artifacts, subtitles, logos.
             """.strip()
 
             operation = client.models.generate_videos(
@@ -558,7 +572,7 @@ class VeoClient:
 
         except Exception as e:
             log_error(f"이미지 기반 비디오 생성 실패: {e}")
-            raise VeoAPIError(f"이미지 기반 비디오 생성 실패: {e}")
+            raise VeoAPIError(f"이미지 기반 비디오 생성 실패: {e}") from e
 
     def generate_video_with_fallback(
         self,
@@ -566,8 +580,8 @@ class VeoClient:
         phase2_prompt: str,
         duration_seconds: int = 8,
         resolution: str = "1080p",
-        progress_callback: Optional[Callable[[str, int], None]] = None,
-        phase2_image_bytes: Optional[bytes] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
+        phase2_image_bytes: bytes | None = None,
     ) -> bytes | str:
         """Generate dual-phase video and fall back to phase1 on failure."""
         self._pre_flight_safety_check(phase1_prompt)
@@ -601,6 +615,7 @@ class VeoClient:
         except Exception as e:
             log_error(f"Phase 2 generation failed, falling back to phase 1: {e}")
             return phase1_result
+
     def generate_multimodal_prompt(
         self,
         system_instruction: str,
@@ -611,7 +626,10 @@ class VeoClient:
         Gemini 1.5 Pro Vision을 이용한 멀티모달 프롬프트 생성
         (썸네일 이미지 + 기획 의도 -> Veo 프롬프트)
         """
-        log_llm_request("Veo 멀티모달 프롬프트 생성", f"이미지 {len(image_bytes):,} bytes, 지시문 {len(user_instruction)}자")
+        log_llm_request(
+            "Veo 멀티모달 프롬프트 생성",
+            f"이미지 {len(image_bytes):,} bytes, 지시문 {len(user_instruction)}자",
+        )
         log_api_start("Gemini Vision Analysis", "Prompt Generation")
 
         try:
@@ -631,7 +649,9 @@ class VeoClient:
             )
 
             result_text = response.text
-            log_llm_response("Veo 멀티모달 프롬프트 생성", f"응답 {len(result_text or '')}자")
+            log_llm_response(
+                "Veo 멀티모달 프롬프트 생성", f"응답 {len(result_text or '')}자"
+            )
             log_api_end("Gemini Vision Analysis")
             return result_text.strip()
 
@@ -639,7 +659,7 @@ class VeoClient:
             log_llm_fail("Veo 멀티모달 프롬프트 생성", str(e))
             log_error(f"멀티모달 프롬프트 생성 실패: {e}")
             # 실패 시 기본 텍스트 반환이 아닌 에러 전파 (상위에서 처리)
-            raise VeoAPIError(f"Vision API 호출 실패: {e}")
+            raise VeoAPIError(f"Vision API 호출 실패: {e}") from e
 
     def _handle_operation(
         self, operation, duration_seconds, progress_callback, output_gcs_uri
