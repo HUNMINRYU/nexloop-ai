@@ -120,7 +120,7 @@ class NaverClient:
             raise
         except Exception as e:
             logger.error(f"네이버 검색 실패: {e}")
-            raise NaverAPIError(f"네이버 검색 실패: {e}", {"query": query})
+            raise NaverAPIError(f"네이버 검색 실패: {e}", {"query": query}) from e
 
     def analyze_competitors(self, products: list[dict]) -> dict:
         """경쟁사 분석 - 가격 통계"""

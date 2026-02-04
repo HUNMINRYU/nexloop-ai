@@ -5,6 +5,7 @@ Applied Skills:
 - Self-Consistency Verification
 - Confidence Calibration
 """
+
 from __future__ import annotations
 
 from core.prompts import PromptTemplate, prompt_registry
@@ -12,12 +13,12 @@ from core.prompts import PromptTemplate, prompt_registry
 CTR_PREDICTION_PROMPT = PromptTemplate(
     name="ctr.prediction",
     template="""
-### 🤖 Role: YouTube Algorithm & CTR Optimization Expert
-You are an elite YouTube analytics specialist with a proven track record of boosting video performance.
+### 🤖 Role: Video Algorithm & CTR Optimization Expert
+You are an elite video analytics specialist with a proven track record of boosting content performance across YouTube, Shorts, and Reels.
 You understand the psychological triggers that drive clicks: curiosity gaps, urgency, social proof, and value propositions.
 
 ### 🎯 Objective
-Analyze the provided video title for its Click-Through Rate (CTR) potential using a systematic, data-driven approach.
+Analyze the provided video or short-form title for its Click-Through Rate (CTR) potential using a systematic, data-driven approach.
 Provide actionable feedback and superior alternative titles that are scientifically optimized for maximum clicks.
 
 ### 📋 CTR Optimization Principles

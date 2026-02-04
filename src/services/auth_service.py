@@ -6,18 +6,18 @@ from typing import Any
 from fastapi import HTTPException
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infrastructure.database.models import User, Team
+from infrastructure.database.models import Team, User
 from utils.logger import (
     get_logger,
-    log_stage_start,
-    log_stage_end,
-    log_stage_fail,
+    log_info,
     log_input_data,
     log_output_data,
-    log_info,
+    log_stage_end,
+    log_stage_fail,
+    log_stage_start,
     log_warning,
 )
 
@@ -105,7 +105,7 @@ class AuthService:
         # 첫 가입자 체크
         user_count = await session.scalar(select(func.count()).select_from(User))
         initial_role = "admin" if user_count == 0 else "editor"
-        
+
         if initial_role == "admin":
             log_info("   👑 첫 번째 사용자 - admin 권한 부여")
         else:
@@ -127,23 +127,23 @@ class AuthService:
         log_output_data("사용자 ID", user.id)
         log_output_data("권한", initial_role)
         log_stage_end("회원가입", f"사용자 {normalized_email} 등록 완료")
-        
+
         return {"token": self._create_token(user)}
 
     async def login(
         self, session: AsyncSession, email: str, password: str
     ) -> dict[str, Any]:
         log_stage_start("로그인", f"사용자: {email}")
-        
+
         normalized_email = email.strip().lower()
         log_input_data("이메일", normalized_email)
 
         user = await session.scalar(select(User).where(User.email == normalized_email))
-        
+
         if not user:
             log_stage_fail("로그인", f"존재하지 않는 사용자: {normalized_email}")
             raise HTTPException(status_code=401, detail="Invalid credentials")
-            
+
         if not self.verify_password(password, user.password):
             log_stage_fail("로그인", f"비밀번호 불일치: {normalized_email}")
             raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -152,25 +152,25 @@ class AuthService:
         log_output_data("사용자 이름", user.name)
         log_output_data("권한", user.role)
         log_stage_end("로그인", f"사용자 {normalized_email} 로그인 성공")
-        
+
         return {"token": self._create_token(user)}
 
     async def get_current_user(self, session: AsyncSession, token: str) -> User:
         log_info("   🔍 현재 사용자 조회 시작")
-        
+
         payload = self.verify_token(token)
         user_id = payload.get("uid")
-        
+
         if not user_id:
             log_warning("   ⚠️ 토큰에 사용자 ID 없음")
             raise HTTPException(status_code=401, detail="Invalid token")
-            
+
         user = await session.get(User, user_id)
-        
+
         if not user:
             log_warning(f"   ⚠️ 사용자 ID {user_id} 찾을 수 없음")
             raise HTTPException(status_code=401, detail="Invalid token")
-            
+
         log_info(f"   ✅ 현재 사용자: {user.email} (권한: {user.role})")
         return user
 
@@ -181,32 +181,32 @@ class AuthService:
     ) -> dict[str, Any]:
         """로그아웃 처리 및 로그 기록"""
         log_stage_start("로그아웃", "사용자 세션 종료")
-        
+
         user_email = "알 수 없음"
         user_role = "알 수 없음"
-        
+
         if token:
             try:
                 payload = self.verify_token(token)
                 user_email = payload.get("sub", "알 수 없음")
                 user_id = payload.get("uid")
                 user_role = payload.get("role", "알 수 없음")
-                
+
                 if user_id:
                     user = await session.get(User, user_id)
                     if user:
                         user_email = user.email
                         user_role = user.role
-                        
+
                 log_output_data("사용자 이메일", user_email)
                 log_output_data("사용자 권한", user_role)
             except Exception as e:
                 log_warning(f"   ⚠️ 토큰 검증 실패 (만료된 토큰으로 로그아웃): {e}")
         else:
             log_warning("   ⚠️ 토큰 없이 로그아웃 요청 (클라이언트 측 세션 삭제)")
-        
+
         log_stage_end("로그아웃", f"사용자 {user_email} 로그아웃 완료")
-        
+
         return {"message": "로그아웃 완료", "email": user_email}
 
 

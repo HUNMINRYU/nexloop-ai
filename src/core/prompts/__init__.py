@@ -27,4 +27,4 @@ class PromptRegistry:
 
 prompt_registry = PromptRegistry()
 
-__all__ = ["PromptTemplate", "PromptRegistry", "prompt_registry"]
+__all__ = ["PromptRegistry", "PromptTemplate", "prompt_registry"]

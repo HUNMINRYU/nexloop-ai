@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List
 
 
 @dataclass
@@ -44,8 +43,8 @@ class CandidateFeatures:
     bookmark_worthy: float = 0.0      # 북마크 저장 가능성
 
     # 추가 메타데이터
-    keywords: List[str] = field(default_factory=list)
-    topics: List[str] = field(default_factory=list)
+    keywords: list[str] = field(default_factory=list)
+    topics: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -56,7 +55,7 @@ class CandidateScore:
     raw_score: float = 0.0           # 보정 전 점수
     positive_score: float = 0.0      # 긍정 시그널 합
     negative_score: float = 0.0      # 부정 시그널 합
-    weighted_components: Dict[str, float] = field(default_factory=dict)
+    weighted_components: dict[str, float] = field(default_factory=dict)
     explanation: str = ""  # 점수 산정 이유 (XAI)
 
 

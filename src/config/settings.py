@@ -5,12 +5,18 @@ Pydantic Settings를 사용하여 안전하게 API 키 및 설정 관리
 Note: YouTube/Gemini는 Vertex AI를 사용하므로 GCP 서비스 계정으로 통합 인증
 """
 
-from functools import lru_cache
 import json
-from typing import Optional
+from functools import lru_cache
 
 from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pathlib import Path
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+# 프로젝트 루트 디렉토리 설정 (src/config/settings.py 기준 2단계 상위)
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 AI_MODEL_RATIONALE = {
     "gemini-3-pro-preview": {
@@ -40,15 +46,13 @@ class GCPSettings(BaseSettings):
         default="us-central1",
         validation_alias=AliasChoices("GOOGLE_CLOUD_LOCATION", "VERTEX_LOCATION"),
     )
-    gcs_bucket_name: Optional[str] = Field(
+    gcs_bucket_name: str | None = Field(
         default=None, validation_alias="GCS_BUCKET_NAME"
     )
-    credentials_path: Optional[str] = Field(
+    credentials_path: str | None = Field(
         default=None, validation_alias="GOOGLE_APPLICATION_CREDENTIALS"
     )
-    data_store_id: Optional[str] = Field(
-        default=None, validation_alias="DATA_STORE_ID"
-    )
+    data_store_id: str | None = Field(default=None, validation_alias="DATA_STORE_ID")
 
     # Vertex AI 통합 API 키 (YouTube, Gemini 공용)
     google_api_key: SecretStr = Field(..., validation_alias="GOOGLE_API_KEY")
@@ -90,12 +94,8 @@ class NotionSettings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
-    api_key: Optional[SecretStr] = Field(
-        default=None, validation_alias="NOTION_API_KEY"
-    )
-    database_id: Optional[str] = Field(
-        default=None, validation_alias="NOTION_DATABASE_ID"
-    )
+    api_key: SecretStr | None = Field(default=None, validation_alias="NOTION_API_KEY")
+    database_id: str | None = Field(default=None, validation_alias="NOTION_DATABASE_ID")
 
 
 class PipelineSettings(BaseSettings):
@@ -233,23 +233,32 @@ class Settings:
     def setup_environment(self) -> None:
         """GCP 환경변수 설정 (Vertex AI용)"""
         import os
-        from pathlib import Path
 
         os.environ["GOOGLE_CLOUD_PROJECT"] = self.gcp.project_id
         os.environ["GOOGLE_CLOUD_LOCATION"] = self.gcp.location
         os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "True"
 
         if self.gcp.credentials_path:
-            credentials_path = Path(self.gcp.credentials_path)
+            path = Path(self.gcp.credentials_path)
+
+            # 상대 경로인 경우 프로젝트 루트와 결합하여 절대 경로 생성
+            if not path.is_absolute():
+                credentials_path = (PROJECT_ROOT / path).resolve()
+            else:
+                credentials_path = path
+
             if credentials_path.exists():
                 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(credentials_path)
+                logger.info(f"GCP 인증 설정 완료 (로컬 경로): {credentials_path.name}")
             else:
-                # 키 파일이 없으면 Workload Identity(ADC)로 전환
+                logger.warning(f"GCP 인증 파일을 찾을 수 없습니다: {credentials_path} ")
                 if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
                     del os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
+        else:
+            logger.info("GCP 인증 파일 경로가 설정되지 않았습니다. ADC를 사용합니다.")
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """캐시된 설정 인스턴스 반환"""
     return Settings()

@@ -13,8 +13,10 @@ from config.products import get_product_catalog
 from core.interfaces.ai_service import IMarketingAIService
 from core.interfaces.chatbot import IRAGClient
 from core.models.chatbot import ChatSession
-from core.prompts import prompt_registry
-from core.prompts import chatbot_prompts  # noqa: F401
+from core.prompts import (
+    chatbot_prompts,  # noqa: F401
+    prompt_registry,
+)
 from utils.logger import get_logger, log_llm_fail, log_llm_request, log_llm_response
 
 logger = get_logger(__name__)
@@ -81,10 +83,7 @@ class ChatbotService:
             answer = raw_response.strip()
 
         card = parsed.get("card") if isinstance(parsed, dict) else None
-        if not isinstance(card, dict):
-            card = None
-        else:
-            card = self._sanitize_card(card)
+        card = None if not isinstance(card, dict) else self._sanitize_card(card)
 
         session.add_message("ai", answer)
 

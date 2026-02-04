@@ -1,7 +1,7 @@
-from typing import List
 
-from services.pipeline.types import Candidate
 from services.pipeline.stages.query_hydrator import UserContext
+from services.pipeline.types import Candidate
+
 from .age_filter import AgeFilter
 from .author_block_filter import AuthorBlockFilter
 from .duplicate_filter import DuplicateFilter
@@ -18,7 +18,7 @@ class CompositeFilter:
         self._age = AgeFilter()
         self._spam = SpamFilter()
 
-    def filter(self, candidates: List[Candidate], user_context: UserContext | None = None) -> List[Candidate]:
+    def filter(self, candidates: list[Candidate], user_context: UserContext | None = None) -> list[Candidate]:
         filtered = self._duplicate.filter(candidates)
         filtered = self._age.filter(filtered)
         filtered = self._spam.filter(filtered)

@@ -4,7 +4,8 @@ AI 기반 마케팅 비디오 생성 비즈니스 로직
 """
 
 import re  # 정규식 모듈 추가
-from typing import Any, Callable, Dict, Optional
+from collections.abc import Callable
+from typing import Any
 
 from core.exceptions import VideoGenerationError
 from core.prompts.veo_template import VeoTemplateManager
@@ -99,9 +100,9 @@ class VideoService:
         duration_seconds: int = 8,
         resolution: str = "720p",
         mode: str = "single",
-        phase2_prompt: Optional[str] = None,
+        phase2_prompt: str | None = None,
         enable_dual_phase_beta: bool = False,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> bytes | str:
         """비디오 생성"""
         # [Defense] 입력값 정화
@@ -171,14 +172,14 @@ class VideoService:
             raise VideoGenerationError(
                 f"비디오 생성 실패: {e}",
                 original_error=e,
-            )
+            ) from e
 
     def generate_from_image(
         self,
         image_bytes: bytes,
         prompt: str,
         duration_seconds: int = 8,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> bytes | None:
         """이미지 기반 비디오 생성 (Image-to-Video)"""
         # [Defense] 입력값 정화
@@ -214,12 +215,53 @@ class VideoService:
             raise VideoGenerationError(
                 f"이미지 기반 비디오 생성 실패: {e}",
                 original_error=e,
+            ) from e
+
+    def extend_generated_video(
+        self,
+        video_uri: str,
+        prompt: str,
+        duration_seconds: int = 8,
+        progress_callback: Callable[[str, int], None] | None = None,
+    ) -> bytes | str:
+        """기존 비디오 연장"""
+        # [Defense] 입력값 정화
+        safe_prompt = self.sanitize_prompt_input(prompt)
+        self._validate_prompt_safety(safe_prompt)
+        log_step(
+            "비디오 연장 요청", "시작", f"Source: {video_uri}, {duration_seconds}s"
+        )
+
+        try:
+            result = self._client.extend_video(
+                video_uri=video_uri,
+                prompt=safe_prompt,
+                duration_seconds=duration_seconds,
+                progress_callback=progress_callback,
             )
+
+            # [Defense] 출력 검증
+            if not self.validate_video_output(result):
+                raise VideoGenerationError("연장된 비디오 데이터가 유효하지 않습니다.")
+
+            if isinstance(result, bytes):
+                log_success(f"비디오 연장 완료 ({len(result)} bytes)")
+            else:
+                log_info(f"비디오 연장 상태: {result[:100]}")
+
+            return result
+
+        except Exception as e:
+            log_error(f"비디오 연장 서비스 실패: {e}")
+            raise VideoGenerationError(
+                f"비디오 연장 실패: {e}",
+                original_error=e,
+            ) from e
 
     def generate_story_prompt_from_image(
         self,
         image_bytes: bytes,
-        product: Dict[str, Any],
+        product: dict[str, Any],
         hook_text: str,
         mode: str = "single",  # single or dual
     ) -> str:
@@ -282,9 +324,9 @@ class VideoService:
         strategy: dict,
         duration_seconds: int = 8,
         mode: str = "single",
-        phase2_prompt: Optional[str] = None,
+        phase2_prompt: str | None = None,
         enable_dual_phase_beta: bool = False,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> bytes | str:
         """마케팅 비디오 생성"""
         p_name = product.get("name", "N/A")

@@ -1,5 +1,4 @@
 import math
-from typing import List
 
 from services.pipeline.types import Candidate, CandidateScore
 
@@ -39,7 +38,7 @@ class EngagementScorer:
     # Negative가 positive를 과도하게 압도하지 않도록 보정하는 offset 비율
     NEGATIVE_OFFSET_RATIO = 0.5
 
-    def score(self, candidates: List[Candidate]) -> List[Candidate]:
+    def score(self, candidates: list[Candidate]) -> list[Candidate]:
         for candidate in candidates:
             self._calculate_single_candidate(candidate)
 

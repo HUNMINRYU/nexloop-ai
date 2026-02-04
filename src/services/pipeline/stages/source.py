@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
 from services.pipeline.types import AuthorInfo, Candidate
 
@@ -8,7 +8,7 @@ from services.pipeline.types import AuthorInfo, Candidate
 class CommentSource:
     """Raw Dict 데이터를 Candidate 객체로 변환 (Thunder 역할)"""
 
-    def item_to_candidate(self, raw_items: List[Dict[str, Any]]) -> List[Candidate]:
+    def item_to_candidate(self, raw_items: list[dict[str, Any]]) -> list[Candidate]:
         candidates = []
         for item in raw_items:
             author_name = item.get("author", "Anonymous")

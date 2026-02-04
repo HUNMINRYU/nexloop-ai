@@ -7,7 +7,7 @@ Cloud Scheduler와 같은 외부 서비스에서 호출하는 엔드포인트입
 from datetime import datetime
 from uuid import uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Request, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from sqlalchemy import select
 
 from infrastructure.database.connection import get_db_session

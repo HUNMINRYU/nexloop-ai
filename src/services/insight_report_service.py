@@ -134,7 +134,7 @@ class InsightReportService:
             "roi": 0.0,
         }
         avg_fields = {"ctr", "cvr", "roi"}
-        counts = {field: 0 for field in avg_fields}
+        counts = dict.fromkeys(avg_fields, 0)
 
         for item in items:
             metrics = item.get("metrics") or {}
@@ -229,5 +229,5 @@ class InsightReportService:
             "period_start": period_start,
             "period_end": period_end,
             "metrics": metrics,
-            "tags": top_tags + [query],
+            "tags": [*top_tags, query],
         }

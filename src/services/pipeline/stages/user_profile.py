@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from utils.logger import get_logger
 
@@ -16,8 +16,8 @@ class UserProfile:
     """사용자 선호 프로필"""
 
     product_id: str = ""
-    preferred_features: Dict[str, float] = field(default_factory=dict)
-    topic_affinities: Dict[str, float] = field(default_factory=dict)
+    preferred_features: dict[str, float] = field(default_factory=dict)
+    topic_affinities: dict[str, float] = field(default_factory=dict)
     interaction_count: int = 0
 
 
@@ -30,9 +30,9 @@ class UserProfileManager:
     def __init__(self, db_session: Any = None):
         self._db = db_session
         # DB 없이도 in-memory로 동작 (테스트/개발용)
-        self._cache: Dict[str, UserProfile] = {}
+        self._cache: dict[str, UserProfile] = {}
 
-    async def load_profile(self, product_id: str) -> Optional[UserProfile]:
+    async def load_profile(self, product_id: str) -> UserProfile | None:
         """프로필 로드 (DB 우선, 없으면 캐시)"""
         if product_id in self._cache:
             return self._cache[product_id]
@@ -58,7 +58,7 @@ class UserProfileManager:
     def learn_from_selections(
         self,
         profile: UserProfile,
-        selected_features: List[Dict[str, float]],
+        selected_features: list[dict[str, float]],
         learning_rate: float = 0.1,
     ) -> UserProfile:
         """선택된 결과로부터 선호도 학습 (exponential moving average)"""
@@ -77,9 +77,10 @@ class UserProfileManager:
         profile.interaction_count += 1
         return profile
 
-    async def _load_from_db(self, product_id: str) -> Optional[UserProfile]:
+    async def _load_from_db(self, product_id: str) -> UserProfile | None:
         """DB에서 프로필 로드"""
         from sqlalchemy import select
+
         from infrastructure.database.models import UserProfileModel
 
         stmt = select(UserProfileModel).where(
@@ -101,6 +102,7 @@ class UserProfileManager:
     async def _save_to_db(self, profile: UserProfile) -> None:
         """DB에 프로필 저장 (upsert)"""
         from sqlalchemy import select
+
         from infrastructure.database.models import UserProfileModel
 
         stmt = select(UserProfileModel).where(

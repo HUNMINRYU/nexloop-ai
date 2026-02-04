@@ -5,7 +5,6 @@
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional
 
 
 class ModelEvaluator:
@@ -20,7 +19,7 @@ class ModelEvaluator:
         model_name: str,
         input_data: dict,
         output: dict,
-        ground_truth: Optional[dict] = None,
+        ground_truth: dict | None = None,
     ) -> None:
         record = {
             "timestamp": datetime.now().isoformat(),
@@ -33,7 +32,7 @@ class ModelEvaluator:
         with log_file.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
 
-    def compare_models(self, model_a: str, model_b: str) -> Dict:
+    def compare_models(self, model_a: str, model_b: str) -> dict:
         return {
             "model_a": model_a,
             "model_b": model_b,

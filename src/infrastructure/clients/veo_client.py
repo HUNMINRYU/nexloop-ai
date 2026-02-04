@@ -211,12 +211,12 @@ AUDIO_PRESETS = {
     "asmr": {
         "name": "ASMR",
         "name_ko": "ASMR",
-        "prompt": "ASMR-style crisp sound effects and whispers",
+        "prompt": "hyper-realistic ASMR foley, crisp tactile textures, high-fidelity proximity sounds",
     },
     "silent": {
         "name": "Silent",
         "name_ko": "무음",
-        "prompt": "no background music, only ambient sounds",
+        "prompt": "absolute minimalism, focus on microscopic atmospheric air sounds, no music",
     },
 }
 
@@ -347,6 +347,18 @@ class AdvancedPromptBuilder:
         self.dialogue = hook
         return self
 
+    def with_brand_kit(self, brand_kit: dict) -> "AdvancedPromptBuilder":
+        """브랜드 킷 적용"""
+        primary_color = brand_kit.get("primary_color")
+        visual_vibes = brand_kit.get("visual_vibes", "premium")
+
+        # 환경에 브랜드 색상/분위기 주입
+        if primary_color:
+            self.environment += f", subtly incorporating {primary_color} color palette"
+
+        self.style = f"{visual_vibes} cinematic"
+        return self
+
     def with_action_style(self, style: str) -> "AdvancedPromptBuilder":
         """동작 스타일 설정"""
         style_actions = {
@@ -456,6 +468,13 @@ class VeoClient:
         progress_callback: Callable[[str, int], None] | None = None,
     ) -> bytes | str:
         """텍스트 프롬프트로 비디오 생성"""
+        # Veo 3.1 제한사항: 최대 8초 (4, 6, 8초 지원)
+        if duration_seconds > 8:
+            logger.warning(
+                f"요청된 길이({duration_seconds}초)가 Veo 최대 길이(8초)를 초과하여 8초로 조정됩니다."
+            )
+            duration_seconds = 8
+
         log_api_start(
             "Veo Video Generation",
             f"Duration: {duration_seconds}s, Resolution: {resolution}",
@@ -574,16 +593,6 @@ class VeoClient:
             log_error(f"이미지 기반 비디오 생성 실패: {e}")
             raise VeoAPIError(f"이미지 기반 비디오 생성 실패: {e}") from e
 
-    def generate_video_with_fallback(
-        self,
-        phase1_prompt: str,
-        phase2_prompt: str,
-        duration_seconds: int = 8,
-        resolution: str = "1080p",
-        progress_callback: Callable[[str, int], None] | None = None,
-        phase2_image_bytes: bytes | None = None,
-    ) -> bytes | str:
-        """Generate dual-phase video and fall back to phase1 on failure."""
         self._pre_flight_safety_check(phase1_prompt)
         self._pre_flight_safety_check(phase2_prompt)
 
@@ -615,6 +624,70 @@ class VeoClient:
         except Exception as e:
             log_error(f"Phase 2 generation failed, falling back to phase 1: {e}")
             return phase1_result
+
+    def extend_video(
+        self,
+        video_uri: str,
+        prompt: str,
+        duration_seconds: int = 8,
+        progress_callback: Callable[[str, int], None] | None = None,
+    ) -> bytes | str:
+        """
+        기존 비디오 연장 (Veo Video Extension)
+
+        Args:
+            video_uri: 원본 비디오의 GCS URI (gs://...)
+            prompt: 연장될 부분에 대한 프롬프트
+            duration_seconds: 연장할 길이 (기본 8초)
+        """
+        log_api_start(
+            "Veo Video Extension",
+            f"Source: {video_uri}, Ext Duration: {duration_seconds}s",
+        )
+        start_time = time.time()
+
+        try:
+            self._pre_flight_safety_check(prompt)
+            from google.genai.types import GenerateVideosConfig, Video
+
+            client = self._get_client()
+
+            date_str = datetime.now().strftime("%Y%m%d")
+            output_gcs_uri = f"gs://{self._gcs_bucket_name}/videos_ext/{date_str}/"
+
+            if progress_callback:
+                progress_callback("Veo Video Extension 요청 중...", 10)
+
+            # GCS URI를 Video 객체로 변환하여 입력 비디오로 사용
+            # google.genai.types.Video 객체 생성 (uri 필수)
+            input_video = Video(uri=video_uri)
+
+            operation = client.models.generate_videos(
+                model=self._model_id,
+                prompt=prompt,
+                video=input_video,  # Video 객체 전달
+                config=GenerateVideosConfig(
+                    aspect_ratio="9:16",
+                    output_gcs_uri=output_gcs_uri,
+                    duration_seconds=duration_seconds,
+                    generate_audio=True,
+                    number_of_videos=1,
+                    negative_prompt="watermarks, text, subtitles, low quality, morphing",
+                    person_generation="allow_adult",
+                ),
+            )
+
+            result = self._handle_operation(
+                operation, duration_seconds, progress_callback, output_gcs_uri
+            )
+
+            elapsed = time.time() - start_time
+            log_api_end("Veo Video Extension", duration=elapsed)
+            return result
+
+        except Exception as e:
+            log_error(f"비디오 연장 실패: {e}")
+            raise VeoAPIError(f"비디오 연장 실패: {e}") from e
 
     def generate_multimodal_prompt(
         self,
@@ -723,12 +796,14 @@ class VeoClient:
                 blob = bucket.blob(blob_path)
                 video_content = blob.download_as_bytes()
 
-                # 임시 파일 삭제 (Clean up)
-                try:
-                    blob.delete()
-                    logger.info(f"임시 비디오 파일 삭제 완료: {video_uri}")
-                except Exception as del_err:
-                    logger.warning(f"임시 비디오 파일 삭제 실패 (무시됨): {del_err}")
+                # 임시 파일 삭제 (Clean up) - 사용자 요청으로 비활성화 (버킷 보존)
+                # try:
+                #     blob.delete()
+                #     logger.info(f"임시 비디오 파일 삭제 완료: {video_uri}")
+                # except Exception as del_err:
+                #     logger.warning(f"임시 비디오 파일 삭제 실패 (무시됨): {del_err}")
+
+                logger.info(f"비디오가 GCS에 보존되었습니다: {video_uri}")
 
                 log_timing("Video Download", (time.time() - download_start) * 1000)
 

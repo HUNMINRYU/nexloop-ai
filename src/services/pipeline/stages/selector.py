@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any
 
 from services.pipeline.types import Candidate
 
@@ -9,8 +9,8 @@ class TopInsightSelector:
     """최종 결과 선정 및 포맷팅 (Selection Layer)"""
 
     def select(
-        self, ranked_candidates: List[Candidate], top_k: int = 3
-    ) -> List[Dict[str, Any]]:
+        self, ranked_candidates: list[Candidate], top_k: int = 3
+    ) -> list[dict[str, Any]]:
         # 상위 K개 선정
         selected = ranked_candidates[:top_k]
 

@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 from services.naver_service import NaverService
-from services.youtube_service import YouTubeService
 from services.rag_ingestion_service import RagIngestionService
+from services.youtube_service import YouTubeService
 from utils.logger import get_logger
 
 logger = get_logger(__name__)

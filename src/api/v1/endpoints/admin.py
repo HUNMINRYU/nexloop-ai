@@ -1,17 +1,18 @@
 from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
-from src.infrastructure.database.connection import get_db_session
-from src.infrastructure.database.models import Role, Team, AuditLog, PipelineSchedule
-from src.schemas.requests import RoleCreateRequest, TeamCreateRequest, ScheduleRequest
-from src.schemas.responses import ScheduleResponse
-from src.api.deps import require_role, CurrentUser, get_scheduler_client
-from src.core.audit import record_audit_log
-from src.utils.cache import clear_all_api_cache, get_cache_stats
+
+from src.api.deps import CurrentUser, get_scheduler_client, require_role
 from src.config.dependencies import get_services
+from src.core.audit import record_audit_log
 from src.infrastructure.clients.scheduler_client import CloudSchedulerClient
+from src.infrastructure.database.connection import get_db_session
+from src.infrastructure.database.models import PipelineSchedule
+from src.schemas.requests import RoleCreateRequest, ScheduleRequest, TeamCreateRequest
+from src.schemas.responses import ScheduleResponse
 from src.services.scheduler_service import SchedulerService
-import os
+from src.utils.cache import clear_all_api_cache, get_cache_stats
 
 router = APIRouter()
 

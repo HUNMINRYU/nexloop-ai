@@ -1,7 +1,5 @@
 """Multi-Dimensional Diversity Scorer - Author, Topic, Sentiment 차원"""
 
-from collections import defaultdict
-from typing import Dict, List
 
 from services.pipeline.types import Candidate
 
@@ -12,7 +10,7 @@ class DiversityDimension:
     def __init__(self, decay: float = 0.7, floor: float = 0.3):
         self.decay = decay
         self.floor = floor
-        self._counts: Dict[str, int] = {}
+        self._counts: dict[str, int] = {}
 
     def get_multiplier(self, key: str) -> float:
         count = self._counts.get(key, 0)
@@ -60,7 +58,7 @@ class MultiDiversityScorer:
         topics = candidate.features.topics
         return topics[0] if topics else "general"
 
-    def apply(self, candidates: List[Candidate]) -> List[Candidate]:
+    def apply(self, candidates: list[Candidate]) -> list[Candidate]:
         self.author_dim.reset()
         self.topic_dim.reset()
         self.sentiment_dim.reset()

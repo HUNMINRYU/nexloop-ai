@@ -5,12 +5,20 @@ YouTube 댓글에서 마케팅 인사이트 추출
 
 import re
 from collections import Counter
-from typing import Optional
 
 from api import validate_json_output
-from core.prompts import prompt_registry
-from core.prompts import hydration_prompts  # noqa: F401
-from utils.logger import get_logger, log_llm_fail, log_llm_request, log_llm_response, log_step, log_success
+from core.prompts import (
+    hydration_prompts,  # noqa: F401
+    prompt_registry,
+)
+from utils.logger import (
+    get_logger,
+    log_llm_fail,
+    log_llm_request,
+    log_llm_response,
+    log_step,
+    log_success,
+)
 
 logger = get_logger(__name__)
 
@@ -105,7 +113,7 @@ class CommentAnalysisService:
             gemini_client: AI 기반 심층 분석 시 사용 (필수)
         """
         self._gemini = gemini_client
-        self.pipeline: Optional["PipelineOrchestrator"] = None
+        self.pipeline: PipelineOrchestrator | None = None
 
         # X-Algorithm Pipeline 초기화
         if self._gemini:
@@ -312,11 +320,9 @@ class CommentAnalysisService:
         pain_comments = []
 
         for text in texts:
-            # 페인 키워드가 포함된 댓글 수집
-            if any(kw in text for kw in PAIN_KEYWORDS):
-                # 너무 짧은 댓글 제외
-                if len(text) > 10:
-                    pain_comments.append(text[:100])  # 100자로 제한
+            # 페인 키워드가 포함되고 너무 짧지 않은 댓글 수집
+            if any(kw in text for kw in PAIN_KEYWORDS) and len(text) > 10:
+                pain_comments.append(text[:100])  # 100자로 제한
 
         # 중복 제거 및 상위 N개 반환
         unique_pains = list(set(pain_comments))
@@ -327,10 +333,9 @@ class CommentAnalysisService:
         gain_comments = []
 
         for text in texts:
-            # 긍정 키워드가 포함된 댓글 수집
-            if any(kw in text.lower() for kw in POSITIVE_KEYWORDS):
-                if len(text) > 10:
-                    gain_comments.append(text[:100])
+            # 긍정 키워드가 포함되고 너무 짧지 않은 댓글 수집
+            if any(kw in text.lower() for kw in POSITIVE_KEYWORDS) and len(text) > 10:
+                gain_comments.append(text[:100])
 
         unique_gains = list(set(gain_comments))
         return unique_gains[:max_count]

@@ -4,8 +4,8 @@ from datetime import datetime
 from typing import Any
 
 from config.dependencies import get_services
-from config.settings import get_settings
 from config.products import get_product_by_name
+from config.settings import get_settings
 from core.models import PipelineConfig
 from core.state import PIPELINE_RESULTS, PIPELINE_STATUS
 from schemas.requests import PipelineRequest

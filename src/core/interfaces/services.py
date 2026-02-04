@@ -2,7 +2,8 @@
 서비스 인터페이스 정의
 """
 
-from typing import Any, Callable, Optional, Protocol, runtime_checkable
+from collections.abc import Callable
+from typing import Any, Protocol, runtime_checkable
 
 from core.models import CollectedData, PipelineConfig, PipelineProgress, PipelineResult
 
@@ -17,7 +18,7 @@ class IYouTubeService(Protocol):
         product: dict,
         max_results: int = 5,
         include_comments: bool = True,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> dict:
         ...
 
@@ -34,7 +35,7 @@ class INaverService(Protocol):
         self,
         product: dict,
         max_results: int = 10,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> dict:
         ...
 
@@ -50,7 +51,7 @@ class IMarketingService(Protocol):
         naver_data: dict,
         product_name: str,
         market_trends: dict | None = None,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
         use_grounding: bool = True,
     ) -> dict[str, Any]:
         ...
@@ -59,7 +60,7 @@ class IMarketingService(Protocol):
         self,
         product: dict,
         collected_data: CollectedData,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> dict[str, Any]:
         ...
 
@@ -83,7 +84,7 @@ class IThumbnailService(Protocol):
         hook_text: str,
         style: str = "neobrutalism",
         include_text_overlay: bool = False,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> bytes | None:
         ...
 
@@ -92,7 +93,7 @@ class IThumbnailService(Protocol):
         product: dict,
         hook_texts: list[str],
         styles: list[str] | None = None,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> list[dict]:
         ...
 
@@ -101,7 +102,7 @@ class IThumbnailService(Protocol):
         product: dict,
         strategy: dict,
         count: int = 3,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> list[dict]:
         ...
 
@@ -109,8 +110,8 @@ class IThumbnailService(Protocol):
         self,
         product: dict,
         hook_text: str,
-        styles: list[str] = None,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        styles: list[str] | None = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> list[dict]:
         ...
 
@@ -122,7 +123,7 @@ class IVideoService(Protocol):
         prompt: str,
         duration_seconds: int = 8,
         resolution: str = "720p",
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> bytes | str:
         ...
 
@@ -131,7 +132,7 @@ class IVideoService(Protocol):
         product: dict,
         strategy: dict,
         duration_seconds: int = 8,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> bytes | str:
         ...
 
@@ -153,7 +154,7 @@ class IPipelineService(Protocol):
         self,
         product: dict,
         config: PipelineConfig,
-        progress_callback: Optional[Callable[[PipelineProgress], None]] = None,
+        progress_callback: Callable[[PipelineProgress], None] | None = None,
     ) -> PipelineResult:
         ...
 
@@ -161,7 +162,7 @@ class IPipelineService(Protocol):
         self,
         product: dict,
         config: PipelineConfig,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> CollectedData:
         ...
 
@@ -175,7 +176,7 @@ class IHookService(Protocol):
         self,
         style: str,
         product: dict,
-        pain_points: list[str] = None,
+        pain_points: list[str] | None = None,
         count: int = 3,
     ) -> list[str]:
         ...
@@ -183,8 +184,8 @@ class IHookService(Protocol):
     def generate_multi_style_hooks(
         self,
         product: dict,
-        pain_points: list[str] = None,
-        styles: list[str] = None,
+        pain_points: list[str] | None = None,
+        styles: list[str] | None = None,
     ) -> dict[str, list[str]]:
         ...
 
@@ -192,7 +193,7 @@ class IHookService(Protocol):
         self,
         product: dict,
         video_style: str = "dramatic",
-        pain_points: list[str] = None,
+        pain_points: list[str] | None = None,
     ) -> list[dict]:
         ...
 
@@ -215,7 +216,7 @@ class ICTRPredictor(Protocol):
         self,
         title: str,
         thumbnail_description: str = "",
-        competitor_titles: list[str] = None,
+        competitor_titles: list[str] | None = None,
         category: str = "general",
     ) -> dict:
         ...
@@ -226,7 +227,7 @@ class ICTRPredictor(Protocol):
     async def predict_with_ai(
         self,
         title: str,
-        thumbnail_bytes: bytes = None,
+        thumbnail_bytes: bytes | None = None,
         category: str = "general",
     ) -> dict:
         ...
@@ -237,7 +238,7 @@ class IExportService(Protocol):
     def export_pdf(self, data: dict, output_path: str) -> str:
         ...
 
-    def export_notion(self, data: dict, parent_page_id: str = None) -> str:
+    def export_notion(self, data: dict, parent_page_id: str | None = None) -> str:
         ...
 
 
@@ -246,7 +247,7 @@ class IHistoryService(Protocol):
     def get_history_list(self) -> list[dict[str, Any]]:
         ...
 
-    def load_history(self, history_id: str) -> Optional[PipelineResult]:
+    def load_history(self, history_id: str) -> PipelineResult | None:
         ...
 
     def delete_history(self, history_id: str) -> bool:
@@ -262,8 +263,8 @@ class ISocialMediaService(Protocol):
         self,
         product: dict,
         strategy: dict,
-        top_insights: list[dict] = None,
-        platforms: list[str] = None,
+        top_insights: list[dict] | None = None,
+        platforms: list[str] | None = None,
     ) -> dict[str, Any]:
         """SNS 채널별 포스팅 문구 생성"""
         ...

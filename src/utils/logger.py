@@ -2,9 +2,10 @@
 Logging utilities for Nexloop.
 """
 
+import contextlib
 import logging
 import sys
-from typing import Callable
+from collections.abc import Callable
 
 
 class ColoredFormatter(logging.Formatter):
@@ -44,10 +45,8 @@ class CallbackHandler(logging.Handler):
         try:
             msg = self.format(record)
             for callback in _log_callbacks:
-                try:
+                with contextlib.suppress(Exception):
                     callback(msg)
-                except Exception:
-                    pass
         except Exception:
             self.handleError(record)
 
@@ -105,9 +104,10 @@ def _stream_is_closed(stream: object) -> bool:
 
 def _has_closed_stream_handler(logger: logging.Logger) -> bool:
     for handler in logger.handlers:
-        if isinstance(handler, logging.StreamHandler):
-            if _stream_is_closed(getattr(handler, "stream", None)):
-                return True
+        if isinstance(handler, logging.StreamHandler) and _stream_is_closed(
+            getattr(handler, "stream", None)
+        ):
+            return True
     return False
 
 
@@ -136,7 +136,8 @@ def log_app_ready() -> None:
 
 
 def log_step(step_name: str, status: str = "start", details: str = "") -> None:
-    msg = f"[STEP] {step_name} - {status}"
+    icon = "👉" if status == "start" else "✅" if status == "complete" else "👣"
+    msg = f"[STEP] {icon} {step_name} - {status}"
     if details:
         msg += f" ({details})"
     get_logger().info(msg)
@@ -181,8 +182,7 @@ def log_llm_request(
         preview = prompt_preview[:max_preview_len]
         if len(prompt_preview) > max_preview_len:
             preview += "..."
-        # 줄바꿈 처리
-        preview = preview.replace("\n", " ")[:max_preview_len]
+        preview = preview.replace("\n", " ").strip()
         get_logger().info(f"   📝 프롬프트: {preview}")
 
 
@@ -195,14 +195,14 @@ def log_llm_response(
     max_preview_len: int = 150,
 ) -> None:
     """LLM 응답 로그 (상세 버전)"""
-    get_logger().info(f"✅ LLM 응답 수신: {usage}")
+    get_logger().info("✅ LLM 응답 수신: " + usage)
     if details:
         get_logger().info(f"   📊 결과: {details}")
     if response_preview:
         preview = response_preview[:max_preview_len]
         if len(response_preview) > max_preview_len:
             preview += "..."
-        preview = preview.replace("\n", " ")[:max_preview_len]
+        preview = preview.replace("\n", " ").strip()
         get_logger().info(f"   📤 응답: {preview}")
     if token_count > 0:
         get_logger().info(f"   🔢 토큰 사용: {token_count}")
@@ -226,11 +226,15 @@ def log_api_call(api_name: str, endpoint: str = "", status: str = "sent") -> Non
 
 
 def log_api_start(api_name: str, details: str = "") -> None:
-    get_logger().info(f"[API] {api_name} request start {details}")
+    get_logger().info(f"[API] 🚀 {api_name} request start")
+    if details:
+        get_logger().info(f"      📋 Info: {details}")
 
 
 def log_api_end(api_name: str, duration: float = 0, items: int = 0) -> None:
-    msg = f"[API] {api_name} response end ({duration:.2f}s)"
+    msg = f"[API] ✅ {api_name} response end"
+    if duration > 0:
+        msg += f" ({duration:.2f}s)"
     if items > 0:
         msg += f" - {items} items"
     get_logger().info(msg)
@@ -238,12 +242,14 @@ def log_api_end(api_name: str, duration: float = 0, items: int = 0) -> None:
 
 def log_process(task: str, current: int, total: int) -> None:
     percent = int((current / total) * 100) if total else 0
-    bar = "#" * (percent // 10) + "-" * (10 - (percent // 10))
-    get_logger().info(f"[PROCESS] {task}: [{bar}] {percent}%")
+    bar_len = 10
+    filled = int(percent / 100 * bar_len)
+    bar = "#" * filled + "-" * (bar_len - filled)
+    get_logger().info(f"[PROCESS] ⏳ {task}: [{bar}] {percent}%")
 
 
 def log_timing(operation: str, duration_ms: float) -> None:
-    get_logger().info(f"[TIMING] {operation}: {duration_ms:.2f}ms")
+    get_logger().info(f"[TIMING] ⏱️ {operation}: {duration_ms:.2f}ms")
 
 
 def log_tab_load(tab_name: str) -> None:
@@ -276,6 +282,7 @@ def log_function(name: str):
 # 🇰🇷 한글 상세 로깅 함수 (Input/Output 추적용)
 # ============================================================
 
+
 def log_stage_start(stage_name: str, description: str = "") -> None:
     """단계 시작 로그 (한글)"""
     get_logger().info("")
@@ -285,7 +292,9 @@ def log_stage_start(stage_name: str, description: str = "") -> None:
         get_logger().info(f"   ℹ️  {description}")
 
 
-def log_stage_end(stage_name: str, result_summary: str = "", duration_ms: float = 0) -> None:
+def log_stage_end(
+    stage_name: str, result_summary: str = "", duration_ms: float = 0
+) -> None:
     """단계 완료 로그 (한글)"""
     get_logger().info(f"✅ [{stage_name}] 완료")
     if result_summary:
@@ -322,22 +331,34 @@ def log_prompt_start(prompt_name: str, context: str = "") -> None:
     """프롬프트 호출 시작 로그"""
     get_logger().info(f"   🤖 [프롬프트] {prompt_name} 호출 시작")
     if context:
-        get_logger().info(f"      📋 컨텍스트: {context[:150]}..." if len(context) > 150 else f"      📋 컨텍스트: {context}")
+        get_logger().info(
+            f"      📋 컨텍스트: {context[:150]}..."
+            if len(context) > 150
+            else f"      📋 컨텍스트: {context}"
+        )
 
 
 def log_prompt_end(prompt_name: str, output_preview: str = "") -> None:
     """프롬프트 호출 완료 로그"""
     get_logger().info(f"   ✨ [프롬프트] {prompt_name} 응답 수신")
     if output_preview:
-        preview = output_preview[:150] + "..." if len(output_preview) > 150 else output_preview
+        preview = (
+            output_preview[:150] + "..."
+            if len(output_preview) > 150
+            else output_preview
+        )
         get_logger().info(f"      📝 응답 미리보기: {preview}")
 
 
-def log_api_request(service_name: str, endpoint: str, params: dict = None) -> None:
+def log_api_request(
+    service_name: str, endpoint: str, params: dict | None = None
+) -> None:
     """API 요청 로그 (상세)"""
     get_logger().info(f"   🌐 [API 요청] {service_name} → {endpoint}")
     if params:
-        params_str = str(params)[:100] + "..." if len(str(params)) > 100 else str(params)
+        params_str = (
+            str(params)[:100] + "..." if len(str(params)) > 100 else str(params)
+        )
         get_logger().info(f"      📦 파라미터: {params_str}")
 
 
@@ -348,10 +369,14 @@ def log_api_response(service_name: str, status: str, data_summary: str = "") -> 
         get_logger().info(f"      📊 데이터 요약: {data_summary}")
 
 
-def log_llm_input(model_name: str, prompt_preview: str, token_estimate: int = 0) -> None:
+def log_llm_input(
+    model_name: str, prompt_preview: str, token_estimate: int = 0
+) -> None:
     """LLM 입력 로그 (상세)"""
     get_logger().info(f"   🧠 [LLM 입력] 모델: {model_name}")
-    preview = prompt_preview[:200] + "..." if len(prompt_preview) > 200 else prompt_preview
+    preview = (
+        prompt_preview[:200] + "..." if len(prompt_preview) > 200 else prompt_preview
+    )
     get_logger().info(f"      📝 프롬프트: {preview}")
     if token_estimate > 0:
         get_logger().info(f"      🔢 예상 토큰: ~{token_estimate}")
@@ -360,39 +385,51 @@ def log_llm_input(model_name: str, prompt_preview: str, token_estimate: int = 0)
 def log_llm_output(model_name: str, response_preview: str, token_used: int = 0) -> None:
     """LLM 출력 로그 (상세)"""
     get_logger().info(f"   💡 [LLM 출력] 모델: {model_name}")
-    preview = response_preview[:200] + "..." if len(response_preview) > 200 else response_preview
+    preview = (
+        response_preview[:200] + "..."
+        if len(response_preview) > 200
+        else response_preview
+    )
     get_logger().info(f"      📤 응답: {preview}")
     if token_used > 0:
         get_logger().info(f"      🔢 사용 토큰: {token_used}")
 
 
-def log_pipeline_progress(step_number: int, total_steps: int, step_name: str, status: str = "진행중") -> None:
+def log_pipeline_progress(
+    step_number: int, total_steps: int, step_name: str, status: str = "진행중"
+) -> None:
     """파이프라인 진행 상황 로그"""
     percent = int((step_number / total_steps) * 100)
     get_logger().info(f"   📊 진행: {percent}% - {step_name}: {status}")
 
 
-def log_service_call(service_name: str, method_name: str, args_summary: str = "") -> None:
+def log_service_call(
+    service_name: str, method_name: str, args_summary: str = ""
+) -> None:
     """서비스 호출 로그"""
     get_logger().info(f"   ⚙️  [서비스 호출] {service_name}.{method_name}()")
     if args_summary:
         get_logger().info(f"      📦 인자: {args_summary}")
 
 
-def log_service_result(service_name: str, method_name: str, result_summary: str = "") -> None:
+def log_service_result(
+    service_name: str, method_name: str, result_summary: str = ""
+) -> None:
     """서비스 결과 로그"""
     get_logger().info(f"   ✔️  [서비스 완료] {service_name}.{method_name}()")
     if result_summary:
         get_logger().info(f"      📤 결과: {result_summary}")
 
 
-def log_json_data(label: str, json_obj: dict, keys_to_show: list = None) -> None:
+def log_json_data(label: str, json_obj: dict, keys_to_show: list | None = None) -> None:
     """JSON 데이터 로그 (선택적 키만 표시)"""
     if keys_to_show:
         filtered = {k: json_obj.get(k, "(없음)") for k in keys_to_show if k in json_obj}
         get_logger().info(f"   📋 [데이터] {label}: {filtered}")
     else:
-        preview = str(json_obj)[:200] + "..." if len(str(json_obj)) > 200 else str(json_obj)
+        preview = (
+            str(json_obj)[:200] + "..." if len(str(json_obj)) > 200 else str(json_obj)
+        )
         get_logger().info(f"   📋 [데이터] {label}: {preview}")
 
 

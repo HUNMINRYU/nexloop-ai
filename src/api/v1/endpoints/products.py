@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+
 from config.products import get_product_by_name, get_product_names
 
 router = APIRouter()

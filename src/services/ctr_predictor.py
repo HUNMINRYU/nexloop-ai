@@ -3,12 +3,20 @@ CTR 예측 서비스
 썸네일 + 제목 조합 분석 및 클릭률 예측
 """
 
-from typing import Optional
 
-from utils.logger import get_logger, log_llm_fail, log_llm_request, log_llm_response, log_step, log_success
-from core.prompts import prompt_registry
-from core.prompts import ctr_prediction_prompts  # noqa: F401
+from core.prompts import (
+    ctr_prediction_prompts,  # noqa: F401
+    prompt_registry,
+)
 from services.model_evaluator import ModelEvaluator
+from utils.logger import (
+    get_logger,
+    log_llm_fail,
+    log_llm_request,
+    log_llm_response,
+    log_step,
+    log_success,
+)
 
 logger = get_logger(__name__)
 
@@ -28,7 +36,7 @@ class CTRPredictor:
         self,
         title: str,
         thumbnail_description: str = "",
-        competitor_titles: Optional[list[str]] = None,
+        competitor_titles: list[str] | None = None,
         category: str = "general",
     ) -> dict:
         """
@@ -264,7 +272,7 @@ class CTRPredictor:
         self,
         title: str,
         thumbnail_description: str = "",
-        pipeline_insights: Optional[list[dict]] = None,
+        pipeline_insights: list[dict] | None = None,
         category: str = "general",
     ) -> dict:
         """
@@ -342,9 +350,9 @@ class CTRPredictor:
     async def predict_with_ai(
         self,
         title: str,
-        thumbnail_bytes: Optional[bytes] = None,
+        thumbnail_bytes: bytes | None = None,
         category: str = "general",
-        top_insights: Optional[list[dict]] = None,
+        top_insights: list[dict] | None = None,
     ) -> dict:
         """
         AI를 활용한 심층 CTR 예측

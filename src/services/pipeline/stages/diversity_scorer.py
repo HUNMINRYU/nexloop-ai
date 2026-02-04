@@ -1,4 +1,3 @@
-from typing import Dict, List
 
 from services.pipeline.types import Candidate
 
@@ -17,8 +16,8 @@ class AuthorDiversityScorer:
         """position번째 등장에 대한 감쇠 배율 (floor 이하로 내려가지 않음)"""
         return (1.0 - self.floor) * (self.decay_factor ** position) + self.floor
 
-    def apply(self, candidates: List[Candidate]) -> List[Candidate]:
-        author_counts: Dict[str, int] = {}
+    def apply(self, candidates: list[Candidate]) -> list[Candidate]:
+        author_counts: dict[str, int] = {}
 
         for candidate in candidates:
             author = candidate.author.username

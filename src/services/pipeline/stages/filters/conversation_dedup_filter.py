@@ -1,7 +1,6 @@
 """같은 대화 쓰레드의 댓글 중 최고 점수만 선택"""
 
 from collections import defaultdict
-from typing import List
 
 from services.pipeline.types import Candidate
 
@@ -12,7 +11,7 @@ class ConversationDedupFilter:
     conversation_id가 없는 댓글은 그대로 통과.
     """
 
-    def filter(self, candidates: List[Candidate]) -> List[Candidate]:
+    def filter(self, candidates: list[Candidate]) -> list[Candidate]:
         if not candidates:
             return []
 
@@ -27,7 +26,7 @@ class ConversationDedupFilter:
 
         # 각 그룹에서 최고 점수 candidate 선택
         best_per_group: list[Candidate] = []
-        for conv_id, group in groups.items():
+        for _conv_id, group in groups.items():
             best = max(group, key=lambda c: c.score.final_score)
             best_per_group.append(best)
 

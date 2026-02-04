@@ -4,11 +4,20 @@ Social Media Post Generation Service
 """
 from typing import Any
 
-from core.interfaces.ai_service import IMarketingAIService
-from core.prompts import prompt_registry
-from core.prompts import social_media_prompts  # noqa: F401
 from api import validate_json_output
-from utils.logger import get_logger, log_llm_fail, log_llm_request, log_llm_response, log_step, log_success
+from core.interfaces.ai_service import IMarketingAIService
+from core.prompts import (
+    prompt_registry,
+    social_media_prompts,  # noqa: F401
+)
+from utils.logger import (
+    get_logger,
+    log_llm_fail,
+    log_llm_request,
+    log_llm_response,
+    log_step,
+    log_success,
+)
 
 logger = get_logger(__name__)
 
@@ -20,8 +29,8 @@ class SocialMediaService:
         self,
         product: dict,
         strategy: dict,
-        top_insights: list[dict] = None,
-        platforms: list[str] = None,
+        top_insights: list[dict] | None = None,
+        platforms: list[str] | None = None,
     ) -> dict[str, Any]:
         if not platforms:
             platforms = ["instagram", "twitter", "blog"]

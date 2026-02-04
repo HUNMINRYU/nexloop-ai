@@ -1,7 +1,6 @@
-from typing import List, Iterable
+from collections.abc import Iterable
 
 from config.settings import get_settings
-
 from services.pipeline.types import Candidate
 
 
@@ -21,7 +20,7 @@ class QualityFilter:
             keyword.strip() for keyword in custom_banned_keywords if keyword.strip()
         ]
 
-    def filter(self, candidates: List[Candidate]) -> List[Candidate]:
+    def filter(self, candidates: list[Candidate]) -> list[Candidate]:
         filtered_candidates = []
         for candidate in candidates:
             if self._is_eligible(candidate):
@@ -44,7 +43,4 @@ class QualityFilter:
                 return False
 
         # 3. Toxicity 필터 (이미 Feature가 있다면)
-        if candidate.features.toxicity > 0.8:
-            return False
-
-        return True
+        return not candidate.features.toxicity > 0.8

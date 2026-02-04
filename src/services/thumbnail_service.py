@@ -1,12 +1,18 @@
 import json
 import re
 from collections.abc import Callable
-from typing import Optional
 
 from config.products import get_product_by_name
 from core.exceptions import ThumbnailGenerationError
 from core.interfaces.ai_service import IMarketingAIService
-from utils.logger import get_logger, log_llm_fail, log_llm_request, log_llm_response, log_step, log_success
+from utils.logger import (
+    get_logger,
+    log_llm_fail,
+    log_llm_request,
+    log_llm_response,
+    log_step,
+    log_success,
+)
 
 logger = get_logger(__name__)
 
@@ -124,7 +130,11 @@ class ThumbnailService:
             accent_color: 강조 색상
             progress_callback: 진행 콜백
         """
-        log_step("썸네일 생성", "시작", f"제품: {product.get('name', 'N/A')}, 훅: {hook_text[:20]}..., 스타일: {style}")
+        log_step(
+            "썸네일 생성",
+            "시작",
+            f"제품: {product.get('name', 'N/A')}, 훅: {hook_text[:20]}..., 스타일: {style}",
+        )
 
         try:
             prompt = self._build_thumbnail_prompt(
@@ -149,7 +159,7 @@ class ThumbnailService:
             raise ThumbnailGenerationError(
                 f"썸네일 생성 실패: {e}",
                 original_error=e,
-            )
+            ) from e
 
     def generate_neobrutalism(
         self,
@@ -181,7 +191,7 @@ class ThumbnailService:
         product: dict,
         hook_texts: list[str],
         styles: list[str] | None = None,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> list[dict]:
         """여러 스타일 썸네일 일괄 생성"""
         log_step("썸네일 일괄 생성", "시작", f"{len(hook_texts)}개")
@@ -210,7 +220,9 @@ class ThumbnailService:
                         "image": image,
                         "hook_text": hook_text,
                         "style": style_key,
-                        "style_name": THUMBNAIL_STYLES.get(style_key, {}).get("name", style_key),
+                        "style_name": THUMBNAIL_STYLES.get(style_key, {}).get(
+                            "name", style_key
+                        ),
                     }
                 )
 
@@ -226,21 +238,27 @@ class ThumbnailService:
         hook_text: str,
         style: str,
         include_text_overlay: bool,
-        accent_color: Optional[str],
+        accent_color: str | None,
+        brand_kit: dict | None = None,
     ) -> str:
         product_name = product.get("name", "Product")
         category = product.get("category", "Item")
         visual_desc = product.get("visual_description") or "generic product packaging"
 
-        style_config = THUMBNAIL_STYLES.get(
-            style, THUMBNAIL_STYLES["neobrutalism"]
-        )
+        style_config = THUMBNAIL_STYLES.get(style, THUMBNAIL_STYLES["neobrutalism"])
         base_prompt = style_config["prompt_modifier"]
-        colors = (
-            accent_color
-            if (style == "neobrutalism" and accent_color)
-            else style_config["colors"]
-        )
+
+        # 색상 결정: 1. 브랜드 킷 2. 강조 색상 3. 스타일 별 기본색
+        colors = style_config["colors"]
+        if brand_kit and brand_kit.get("primary_color"):
+            colors = f"centered around {brand_kit['primary_color']} and {brand_kit.get('secondary_color', 'neutral colors')}"
+        elif accent_color:
+            colors = accent_color
+
+        # 폰트/분위기 추가 지침
+        brand_vibes = ""
+        if brand_kit:
+            brand_vibes = f" Brand mood: {brand_kit.get('tone_and_voice', 'professional')}. Style: {brand_kit.get('font_style', 'Bold Sans-serif')}."
 
         if include_text_overlay:
             text_container_map = {
@@ -255,32 +273,29 @@ class ThumbnailService:
                 "professional": "on a semi-transparent dark overlay for contrast",
                 "default": "inside a semi-transparent dark text box for readability",
             }
-            container = text_container_map.get(
-                style, text_container_map["default"]
-            )
+            container = text_container_map.get(style, text_container_map["default"])
             text_instruction = (
                 f'Text Overlay: Write "{hook_text}" {container}. '
                 "Font: Bold Sans-serif. Ensure text is distinct, sharp, and 2D flat layer on top. "
-                "Do not blend text with background."
+                "Render text exactly ONCE. Do not repeat text. Do not blend text with background."
             )
         else:
-            text_instruction = (
-                "No text, focus on visual imagery and composition."
-            )
+            text_instruction = "No text, focus on visual imagery and composition."
 
         full_prompt = (
-            f"A vertical YouTube Shorts thumbnail. "
+            f"A high-conversion vertical short-form video thumbnail. "
             f"Subject: {visual_desc} representing {product_name} ({category}). "
             f"Style: {base_prompt}. "
             f"Colors: {colors}. "
             f"**{text_instruction}** "
+            f"{brand_vibes} "
             "Composition: Centered subject, safe zone for UI at top and bottom. "
             "Quality: 8k, highly detailed, professional commercial finish."
         )
         prompt_escaped = full_prompt.replace("\\", "\\\\").replace('"', '\\"')
 
         settings_negative = (
-            "--no blurry text --no double text --no ghosting "
+            "--no blurry text --no double text --no duplicated text --no repeating text --no ghosting "
             "--no youtube interface --no search bar --no phone battery icon "
             "--no ui elements --no distorted hands --ar 9:16"
         )
@@ -299,8 +314,8 @@ class ThumbnailService:
         self,
         product: dict,
         hook_text: str,
-        styles: list[str] = None,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        styles: list[str] | None = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> list[dict]:
         """
         A/B 테스트용 다양한 스타일 썸네일 세트 생성
@@ -352,8 +367,8 @@ class ThumbnailService:
         product: dict,
         strategy: dict,
         count: int = 3,
-        styles: Optional[list[str]] = None,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        styles: list[str] | None = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> list[dict]:
         """전략 기반 썸네일 생성"""
         # 전략에서 훅 텍스트 추출
@@ -367,7 +382,7 @@ class ThumbnailService:
                     hooks.append(h_text)
             elif h:
                 hooks.append(str(h))
-        
+
         if not hooks:
             hooks = [f"{product.get('name', '제품')} 지금 바로!"]
 
@@ -449,9 +464,13 @@ Analyze the product description below and output a JSON object containing:
                 text = re.sub(r"\s*```\s*$", "", text)
                 data = json.loads(text)
                 # LLM은 3가지(visual_description, hook_text, recommended_style)만 반환; name/category는 기본값
-                visual_description = data.get("visual_description") or default_info["visual_description"]
+                visual_description = (
+                    data.get("visual_description") or default_info["visual_description"]
+                )
                 hook_text = (data.get("hook_text") or default_info["hook_text"]).strip()
-                recommended_style = (data.get("recommended_style") or "").strip() or default_info["recommended_style"]
+                recommended_style = (
+                    data.get("recommended_style") or ""
+                ).strip() or default_info["recommended_style"]
                 if recommended_style not in style_keys:
                     recommended_style = default_info["recommended_style"]
                 log_llm_response(
@@ -479,7 +498,11 @@ Analyze the product description below and output a JSON object containing:
                 "hook_text": "바퀴벌레 박멸",
                 "recommended_style": "raw_authentic",
             }
-        if "화장품" in raw_description or "세럼" in raw_description or "글로우" in raw_description:
+        if (
+            "화장품" in raw_description
+            or "세럼" in raw_description
+            or "글로우" in raw_description
+        ):
             logger.info("[STEP] 상품 설명 분석 - 키워드 폴백 (화장품/세럼)")
             return {
                 "name": "글로우 세럼",
@@ -488,7 +511,11 @@ Analyze the product description below and output a JSON object containing:
                 "hook_text": "3초 물광 피부",
                 "recommended_style": "fresh_clean",
             }
-        if "텀블러" in raw_description or "아쿠아" in raw_description or "얼음" in raw_description and "24" in raw_description:
+        if (
+            "텀블러" in raw_description
+            or "아쿠아" in raw_description
+            or ("얼음" in raw_description and "24" in raw_description)
+        ):
             logger.info("[STEP] 상품 설명 분석 - 키워드 폴백 (텀블러)")
             return {
                 "name": "아쿠아 텀블러",
@@ -503,7 +530,7 @@ Analyze the product description below and output a JSON object containing:
     def generate_from_description(
         self,
         raw_description: str,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> bytes | None:
         """
         상품 설명 줄글만 넣으면 시각 정보를 추출한 뒤 썸네일을 생성합니다.
@@ -527,7 +554,7 @@ Analyze the product description below and output a JSON object containing:
     def generate_from_product_name(
         self,
         product_name: str,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> bytes | None:
         """
         제품명만 넣으면 카탈로그에서 제품·설명을 가져와 시각 정보 추출 후 썸네일 생성.
@@ -535,17 +562,13 @@ Analyze the product description below and output a JSON object containing:
         """
         product = get_product_by_name(product_name)
         if not product:
-            raise ThumbnailGenerationError(
-                f"제품을 찾을 수 없습니다: {product_name}"
-            )
+            raise ThumbnailGenerationError(f"제품을 찾을 수 없습니다: {product_name}")
         raw_description = (
             f"{product.name}. {product.description}. 대상: {product.target}."
         )
         analyzed = self.extract_visual_info(raw_description)
         product_dict = (
-            product.model_dump()
-            if hasattr(product, "model_dump")
-            else product.__dict__
+            product.model_dump() if hasattr(product, "model_dump") else product.__dict__
         )
         category_val = getattr(
             product_dict.get("category"),

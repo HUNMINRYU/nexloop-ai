@@ -2,7 +2,6 @@
 네이버 쇼핑 관련 도메인 모델
 """
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -13,7 +12,7 @@ class NaverProduct(BaseModel):
     product_id: str = Field(..., description="상품 ID")
     title: str = Field(..., description="상품명")
     link: str = Field(..., description="상품 링크")
-    image: Optional[str] = Field(default=None, description="이미지 URL")
+    image: str | None = Field(default=None, description="이미지 URL")
     price: int = Field(default=0, ge=0, description="최저가")
     mall_name: str = Field(default="", description="판매처")
     brand: str = Field(default="", description="브랜드")
@@ -46,7 +45,7 @@ class NaverSearchResult(BaseModel):
 
     query: str = Field(..., description="검색 쿼리")
     products: list[NaverProduct] = Field(default_factory=list, description="검색된 상품 목록")
-    competitor_stats: Optional[CompetitorStats] = Field(default=None, description="경쟁사 통계")
+    competitor_stats: CompetitorStats | None = Field(default=None, description="경쟁사 통계")
     collected_at: datetime = Field(default_factory=datetime.now, description="수집 시간")
 
     @property

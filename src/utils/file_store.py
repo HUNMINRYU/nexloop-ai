@@ -7,7 +7,6 @@ from __future__ import annotations
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 
 def _detect_image_ext(data: bytes) -> str:
@@ -25,7 +24,7 @@ def _detect_video_ext(data: bytes) -> str:
     return ".bin"
 
 
-def ensure_output_dir(base_dir: Optional[Path] = None) -> Path:
+def ensure_output_dir(base_dir: Path | None = None) -> Path:
     if base_dir is None:
         from config.settings import get_settings
 
@@ -41,7 +40,7 @@ def ensure_output_dir(base_dir: Optional[Path] = None) -> Path:
     return out_dir
 
 
-def save_thumbnail_bytes(data: bytes, base_dir: Optional[Path] = None) -> str:
+def save_thumbnail_bytes(data: bytes, base_dir: Path | None = None) -> str:
     out_dir = ensure_output_dir(base_dir) / "thumbnails"
     out_dir.mkdir(parents=True, exist_ok=True)
     ext = _detect_image_ext(data)
@@ -51,7 +50,7 @@ def save_thumbnail_bytes(data: bytes, base_dir: Optional[Path] = None) -> str:
     return str(path)
 
 
-def save_video_bytes(data: bytes, base_dir: Optional[Path] = None) -> str:
+def save_video_bytes(data: bytes, base_dir: Path | None = None) -> str:
     out_dir = ensure_output_dir(base_dir) / "videos"
     out_dir.mkdir(parents=True, exist_ok=True)
     ext = _detect_video_ext(data)
@@ -61,7 +60,7 @@ def save_video_bytes(data: bytes, base_dir: Optional[Path] = None) -> str:
     return str(path)
 
 
-def save_metadata(payload: dict, base_dir: Optional[Path] = None) -> str:
+def save_metadata(payload: dict, base_dir: Path | None = None) -> str:
     out_dir = ensure_output_dir(base_dir) / "metadata"
     out_dir.mkdir(parents=True, exist_ok=True)
     name = datetime.now().strftime("meta_%Y%m%d_%H%M%S") + ".json"

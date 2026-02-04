@@ -330,7 +330,7 @@ export function fetchThumbnailStyles() {
     return request<{ styles: ApiTypes.ThumbnailStyle[] }>('/thumbnail/styles');
 }
 
-export function generateHooks(payload: { product_name: string; style: string; count?: number }) {
+export function generateHooks(payload: { product_name: string; style: string; count?: number; length?: string }) {
     return request<{ hooks: string[] }>('/hooks/generate', {
         method: 'POST',
         body: JSON.stringify(payload),
@@ -375,8 +375,20 @@ export function generateVideo(payload: {
     audio_preset?: string;
     sfx?: string[];
     ambient?: string | null;
+    custom_prompt?: string;
 }) {
     return request<{ url: string; gcs_path?: GcsPath; prompt: string }>('/video/generate', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    });
+}
+
+export function extendVideo(payload: {
+    video_uri: string;
+    prompt: string;
+    duration_seconds?: number;
+}) {
+    return request<{ url: string; gcs_path?: GcsPath; prompt: string }>('/video/extend', {
         method: 'POST',
         body: JSON.stringify(payload),
     });
@@ -494,5 +506,30 @@ export function toggleSchedule(id: number, enabled: boolean) {
     return request<{ message: string }>(`/admin/schedules/${id}/toggle`, {
         method: 'PATCH',
         body: JSON.stringify({ enabled }),
+    });
+}
+// ===== Studio (Custom Mode) API =====
+
+export function createStudioDraft(payload: {
+    product_name: string;
+    product_desc: string;
+    hook_text: string;
+    style?: string;
+    brand_kit?: any;
+}) {
+    return request<any>('/studio/draft', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    });
+}
+
+export function refineStudioPrompt(payload: {
+    original_prompt: string;
+    user_feedback: string;
+    brand_kit?: any;
+}) {
+    return request<any>('/studio/refine', {
+        method: 'POST',
+        body: JSON.stringify(payload),
     });
 }

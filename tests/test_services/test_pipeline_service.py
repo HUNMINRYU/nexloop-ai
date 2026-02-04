@@ -1,3 +1,5 @@
+import pytest
+
 from core.models import PipelineConfig
 from services.data_collection_service import DataCollectionService
 from services.marketing_service import MarketingService
@@ -6,7 +8,8 @@ from services.pipeline_service import PipelineService
 from services.youtube_service import YouTubeService
 
 
-def test_pipeline_service_execute_minimal(
+@pytest.mark.asyncio
+async def test_pipeline_service_execute_minimal(
     sample_product,
     mock_gemini_client,
     mock_youtube_client,
@@ -45,7 +48,7 @@ def test_pipeline_service_execute_minimal(
         upload_to_gcs=False,
     )
 
-    result = service.execute(product=sample_product, config=config)
+    result = await service.execute(product=sample_product, config=config)
     assert result.success is True
     assert result.product_name == sample_product["name"]
     assert result.collected_data is not None

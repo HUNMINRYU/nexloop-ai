@@ -4,7 +4,7 @@ PDF Export Service
 
 import os
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -22,10 +22,10 @@ logger = get_logger(__name__)
 class PdfService(ExportPort):
     """PDF 내보내기 서비스"""
 
-    def __init__(self, font_path: str = None):
+    def __init__(self, font_path: str | None = None):
         self._register_font(font_path)
 
-    def _register_font(self, font_path: str = None) -> None:
+    def _register_font(self, font_path: str | None = None) -> None:
         """한글 폰트 등록 (NanumGothic)"""
         try:
             # OS별 폰트 경로 시도
@@ -54,7 +54,7 @@ class PdfService(ExportPort):
             logger.error(f"폰트 등록 실패: {e}")
             self.font_name = "Helvetica"
 
-    def export(self, data: Dict[str, Any], output_path: str) -> str:
+    def export(self, data: dict[str, Any], output_path: str) -> str:
         """분석 결과를 PDF로 생성"""
         try:
             doc = SimpleDocTemplate(

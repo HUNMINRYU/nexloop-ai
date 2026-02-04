@@ -1,4 +1,4 @@
-from typing import List, Iterable
+from collections.abc import Iterable
 
 from services.pipeline.types import Candidate
 from utils.bloom_filter import BloomFilter
@@ -28,7 +28,7 @@ class PreviouslySeenFilter:
             self._set = set(ids)
             self._bloom = None
 
-    def filter(self, candidates: List[Candidate]) -> List[Candidate]:
+    def filter(self, candidates: list[Candidate]) -> list[Candidate]:
         if self._bloom is not None:
             return [c for c in candidates if not self._bloom.contains(c.id)]
         if not self._set:

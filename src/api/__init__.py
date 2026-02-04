@@ -6,7 +6,8 @@ import json
 import logging
 import re
 import time
-from typing import Any, Callable, Dict, List, Optional
+from collections.abc import Callable
+from typing import Any
 
 from config.constants import HOOK_TEMPLATES, HOOK_TYPES
 from core.prompts.veo_prompt_engine import VeoPromptEngine
@@ -41,7 +42,7 @@ def retry_with_backoff(
             if attempt < max_retries - 1:
                 delay = min(base_delay * (2**attempt), max_delay)
                 logger.warning(
-                    f"Action failed. Retrying {attempt + 1}/{max_retries} in {delay:.1f}s... Error: {str(e)}"
+                    f"Action failed. Retrying {attempt + 1}/{max_retries} in {delay:.1f}s... Error: {e!s}"
                 )
                 time.sleep(delay)
 
@@ -53,7 +54,7 @@ def retry_with_backoff(
 # === 2. Validation Utilities ===
 
 
-def _extract_first_json_object(text: str) -> Optional[str]:
+def _extract_first_json_object(text: str) -> str | None:
     """첫 번째 완전한 { ... } 블록만 추출 (중첩 괄호 대응)."""
     start = text.find("{")
     if start == -1:
@@ -79,8 +80,8 @@ def _fix_common_json_issues(raw: str) -> str:
 
 def validate_json_output(
     text: str,
-    required_fields: Optional[List[str]] = None,
-) -> Dict[str, Any]:
+    required_fields: list[str] | None = None,
+) -> dict[str, Any]:
     """
     LLM 출력 JSON 검증 및 정화 (Standalone)
 
@@ -94,8 +95,8 @@ def validate_json_output(
     text = re.sub(r"```\s*", "", text)
     text = text.strip()
 
-    result: Dict[str, Any] = {}
-    json_str: Optional[str] = None
+    result: dict[str, Any] = {}
+    json_str: str | None = None
 
     try:
         result = json.loads(text)
@@ -121,17 +122,17 @@ def validate_json_output(
 # === 3. Hook Utilities ===
 
 
-def get_hook_types() -> List[str]:
+def get_hook_types() -> list[str]:
     """사용 가능한 훅 타입 목록 반환"""
     return HOOK_TYPES
 
 
 def generate_hook_texts(
     product_name: str,
-    hook_types: Optional[List[str]] = None,
+    hook_types: list[str] | None = None,
     count: int = 5,
-    custom_params: Optional[Dict[str, Any]] = None,
-) -> List[Dict[str, str]]:
+    custom_params: dict[str, Any] | None = None,
+) -> list[dict[str, str]]:
     """
     템플릿 기반 훅 텍스트 생성 (Rule-based)
 
@@ -178,16 +179,16 @@ def generate_hook_texts(
 # === 4. Prompt Engine Utilities ===
 
 
-def get_prompt_example(style: str = "Cinematic") -> Dict[str, str]:
+def get_prompt_example(style: str = "Cinematic") -> dict[str, str]:
     """Veo 프롬프트 예시 반환"""
     return VeoPromptEngine.get_prompt_example(style)
 
 
 __all__ = [
+    "VeoPromptEngine",
+    "generate_hook_texts",
+    "get_hook_types",
+    "get_prompt_example",
     "retry_with_backoff",
     "validate_json_output",
-    "get_hook_types",
-    "generate_hook_texts",
-    "get_prompt_example",
-    "VeoPromptEngine",
 ]

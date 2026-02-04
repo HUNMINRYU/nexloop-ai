@@ -1,23 +1,69 @@
-"""
-후킹 서비스
-AI 기반 마케팅 후킹 문구 자동 생성
-"""
+from datetime import datetime
+from typing import Any
 
-from utils.logger import get_logger, log_llm_fail, log_llm_request, log_llm_response, log_step, log_success
+from utils.logger import (
+    get_logger,
+    log_llm_fail,
+    log_llm_request,
+    log_llm_response,
+    log_step,
+    log_success,
+)
 
 logger = get_logger(__name__)
 
 # === 훅 전략 프리셋 (9종, UI 표기용 label + LLM 프롬프트용 instruction) ===
 HOOK_STRATEGIES = [
-    {"key": "curiosity", "label": "Curiosity (호기심)", "instruction": "Write a clickbait hook that teases a secret or hidden truth without revealing it immediately. Make the user curious."},
-    {"key": "loss_aversion", "label": "Loss Aversion (손실 회피)", "instruction": "Emphasize the negative consequences or money/health lost by NOT using the product. Focus on pain points."},
-    {"key": "social_proof", "label": "Social Proof (사회적 증명)", "instruction": "Highlight popularity, user reviews, or 'everyone is doing it' mentality. Use numbers or rankings."},
-    {"key": "authority", "label": "Authority (권위)", "instruction": "Use a tone of expert recommendation, scientific backing, or official certification to build trust."},
-    {"key": "scarcity", "label": "Scarcity (희소성)", "instruction": "Emphasize limited quantity, limited stock, or exclusive access to make the product feel rare."},
-    {"key": "zeigarnik", "label": "Zeigarnik (미완성 효과)", "instruction": "Start a sentence but leave the conclusion open-ended (ellipsis...), forcing the user to click to finish the thought."},
-    {"key": "urgency", "label": "Urgency (긴급성)", "instruction": "Create a sense of immediate time pressure. Use words like 'Now', 'Today only', 'Ends soon'."},
-    {"key": "negativity", "label": "Negativity (공포/충격)", "instruction": "Shock the viewer with a scary fact or worst-case scenario related to the pest problem. High emotional impact."},
-    {"key": "benefit", "label": "Benefit (즉각적 혜택)", "instruction": "Focus purely on the positive, instant result. No fluff, just the dream outcome realized immediately."},
+    {
+        "key": "curiosity",
+        "label": "Curiosity (호기심)",
+        "instruction": "Write a clickbait hook that teases a secret or hidden truth without revealing it immediately. Make the user curious.",
+    },
+    {
+        "key": "loss_aversion",
+        "label": "Loss Aversion (손실 회피)",
+        "instruction": "Emphasize the negative consequences or money/health lost by NOT using the product. Focus on pain points.",
+    },
+    {
+        "key": "social_proof",
+        "label": "Social Proof (사회적 증명)",
+        "instruction": "Highlight popularity, user reviews, or 'everyone is doing it' mentality. Use numbers or rankings.",
+    },
+    {
+        "key": "authority",
+        "label": "Authority (권위)",
+        "instruction": "Use a tone of expert recommendation, scientific backing, or official certification to build trust.",
+    },
+    {
+        "key": "scarcity",
+        "label": "Scarcity (희소성)",
+        "instruction": "Emphasize limited quantity, limited stock, or exclusive access to make the product feel rare.",
+    },
+    {
+        "key": "zeigarnik",
+        "label": "Zeigarnik (미완성 효과)",
+        "instruction": "Start a sentence but leave the conclusion open-ended (ellipsis...), forcing the user to click to finish the thought.",
+    },
+    {
+        "key": "urgency",
+        "label": "Urgency (긴급성)",
+        "instruction": "Create a sense of immediate time pressure. Use words like 'Now', 'Today only', 'Ends soon'.",
+    },
+    {
+        "key": "negativity",
+        "label": "Negativity (공포/충격)",
+        "instruction": "Shock the viewer with a scary fact or worst-case scenario related to the pest problem. High emotional impact.",
+    },
+    {
+        "key": "benefit",
+        "label": "Benefit (즉각적 혜택)",
+        "instruction": "Focus purely on the positive, instant result. No fluff, just the dream outcome realized immediately.",
+    },
+    {
+        "key": "trend",
+        "label": "Trend / Meme (최신 유행)",
+        "instruction": "Use current viral memes (e.g., Kim Dong-hyun, Han River Cat) or trending slang to make the product feel extremely relevant and hip.",
+    },
 ]
 
 # === 후킹 스타일 템플릿 (LLM 폴백·비디오 등에서 사용) ===
@@ -155,6 +201,17 @@ HOOK_STYLES = {
         ],
         "description": "복잡한 과정 없이 바로 얻을 수 있는 보상 강조",
     },
+    "trend": {
+        "name": "최신 밈/트렌드형",
+        "emoji": "🔥",
+        "templates": [
+            "요즘 난리난 {product} 실체 ㄷㄷ",
+            "이거 모르면 손해인 {product} 사용법",
+            "인스타에서 품절 대란난 그 제품",
+            "지금 제일 핫한 {benefit} 아이템",
+        ],
+        "description": "현재 가장 핫한 밈과 트렌드를 반영하여 화제성 확보",
+    },
 }
 
 
@@ -174,20 +231,23 @@ class HookService:
         for s in HOOK_STRATEGIES:
             key = s["key"]
             style = HOOK_STYLES.get(key, {})
-            result.append({
-                "key": key,
-                "name": s["label"],
-                "emoji": style.get("emoji", ""),
-                "description": style.get("description", ""),
-            })
+            result.append(
+                {
+                    "key": key,
+                    "name": s["label"],
+                    "emoji": style.get("emoji", ""),
+                    "description": style.get("description", ""),
+                }
+            )
         return result
 
     def generate_hooks(
         self,
         style: str,
         product: dict,
-        pain_points: list[str] = None,
+        pain_points: list[str] | None = None,
         count: int = 3,
+        length: str = "long",  # short, medium, long
     ) -> list[str]:
         """
         특정 스타일의 후킹 문구 생성.
@@ -201,34 +261,41 @@ class HookService:
         style_name = HOOK_STYLES[style_normalized]["name"]
         instruction = strategy["instruction"] if strategy else None
 
-        # 1) LLM에 제품·제품설명 전달 후 훅 생성 요청
+        # 길이 옵션에 따른 글자 수 제한 설정
+        length_guide = "20-30 Korean characters"
+        if length == "short":
+            length_guide = "UNDER 20 Korean characters (Short & Punchy)"
+        elif length == "long":
+            length_guide = "30-45 Korean characters (Descriptive & Story)"
+
         if self._gemini and hasattr(self._gemini, "generate_text"):
             log_llm_request(
                 "훅 생성",
-                f"LLM에게 제품·제품설명 전달, 스타일: {style_name}({style}), {count}개 요청 (제품: {p_name})",
+                f"LLM에게 제품·제품설명 전달, 스타일: {style_name}({style}), {count}개 요청 (제품: {p_name}, 길이: {length})",
             )
             strategy_instruction = (
                 f"\n[Copywriting Strategy (CRITICAL - Follow Exactly)]\n{instruction}\n"
-                if instruction else ""
+                if instruction
+                else ""
             )
             prompt = f"""### 🤖 Role: Short-form Advertising Hook Specialist
-You are an elite Korean advertising copywriter specializing in scroll-stopping hook phrases for YouTube Shorts and TikTok thumbnails.
-You have mastered the psychological triggers that make viewers stop scrolling: Curiosity Gap, Loss Aversion, Social Proof, Urgency, and Emotional Resonance.
-
-### 🎯 Objective
-Generate exactly {count} Korean hook phrases for the "{style_name}" style that:
-- Stop the scroll within 0.5 seconds
-- Create irresistible curiosity or emotional urgency
-- Drive immediate click-through
-{strategy_instruction}
-### 📦 Product Context
-- **Product Name:** {p_name}
-- **Product Description:** {p_desc or "(정보 없음)"}
-- **Target Audience:** {p_target or "(정보 없음)"}
-
-### 📋 Hook Writing Principles (CRITICAL)
-1. **Character Limit:** 10-15 Korean characters MAXIMUM (shorter = better)
-2. **Immediate Impact:** The reader must feel emotion in the first 3 characters
+            You are an elite Korean advertising copywriter specializing in scroll-stopping hook phrases for vertical short-form video platforms (Shorts, Reels, TikTok).
+            You have mastered the psychological triggers that make viewers stop scrolling: Curiosity Gap, Loss Aversion, Social Proof, Urgency, and Emotional Resonance.
+            
+            ### 🎯 Objective
+            Generate exactly {count} Korean hook phrases for the "{style_name}" style that:
+            - Stop the scroll within 0.5 seconds
+            - Create irresistible curiosity or emotional urgency
+            - Drive immediate click-through
+            {strategy_instruction}
+            ### 📦 Product Context
+            - **Product Name:** {p_name}
+            - **Product Description:** {p_desc or "(정보 없음)"}
+            - **Target Audience:** {p_target or "(정보 없음)"}
+            
+            ### 📋 Hook Writing Principles (CRITICAL)
+            1. **Character Limit:** {length_guide}
+            2. **Immediate Impact:** The reader must feel emotion in the first 3 characters
 3. **No Generic Phrases:** Avoid clichés like "지금 바로" or "놓치지 마세요" unless strategically used
 4. **Specificity Wins:** Numbers and concrete details outperform vague promises
 5. **Colloquial Tone:** Write like a friend texting, not a corporate ad
@@ -249,17 +316,29 @@ Generate exactly {count} Korean hook phrases for the "{style_name}" style that:
 """
             try:
                 response = self._gemini.generate_text(prompt, temperature=0.6)
-                lines = [line.strip() for line in (response or "").strip().split("\n") if line.strip()]
+                lines = [
+                    line.strip()
+                    for line in (response or "").strip().split("\n")
+                    if line.strip()
+                ]
                 # 번호/불릿 제거
+                max_len = 60
+                if length == "short":
+                    max_len = 25
+                elif length == "medium":
+                    max_len = 40
+
                 hooks = []
                 for line in lines[: count + 5]:
                     clean = line.lstrip("0123456789.-) ").strip()
-                    if clean and len(clean) <= 25:
+                    if clean and len(clean) <= max_len:
                         hooks.append(clean)
                         if len(hooks) >= count:
                             break
                 if hooks:
-                    log_llm_response("훅 생성", f"LLM이 제품·설명 반영해 {len(hooks)}개 생성 완료")
+                    log_llm_response(
+                        "훅 생성", f"LLM이 제품·설명 반영해 {len(hooks)}개 생성 완료"
+                    )
                     return hooks[:count]
             except Exception as e:
                 log_llm_fail("훅 생성", str(e))
@@ -278,7 +357,11 @@ Generate exactly {count} Korean hook phrases for the "{style_name}" style that:
         elif product.get("pain_points"):
             pain_point = product["pain_points"][0]
         elif p_target:
-            pain_point = p_target if len(p_target) <= 8 else p_target.replace("모든 ", "").split("/")[0].strip()
+            pain_point = (
+                p_target
+                if len(p_target) <= 8
+                else p_target.replace("모든 ", "").split("/")[0].strip()
+            )
         format_kwargs = {
             "product": p_name,
             "benefit": p_benefit,
@@ -289,7 +372,10 @@ Generate exactly {count} Korean hook phrases for the "{style_name}" style that:
             "count": "10만",
             "discount": "30",
         }
-        hooks = [templates[i].format(**format_kwargs) for i in range(min(count, len(templates)))]
+        hooks = [
+            templates[i].format(**format_kwargs)
+            for i in range(min(count, len(templates)))
+        ]
         log_success(f"{len(hooks)}개 후킹 문구 생성 완료 (템플릿)")
         return hooks
 
@@ -318,8 +404,8 @@ Generate exactly {count} Korean hook phrases for the "{style_name}" style that:
     def generate_multi_style_hooks(
         self,
         product: dict,
-        pain_points: list[str] = None,
-        styles: list[str] = None,
+        pain_points: list[str] | None = None,
+        styles: list[str] | None = None,
     ) -> dict[str, list[str]]:
         """
         여러 스타일의 후킹 문구 일괄 생성
@@ -433,7 +519,7 @@ Each hook should apply a DIFFERENT psychological strategy to maximize A/B testin
         self,
         product: dict,
         video_style: str = "dramatic",
-        pain_points: list[str] = None,
+        pain_points: list[str] | None = None,
     ) -> list[dict]:
         """
         비디오 스타일에 맞는 최적의 후킹 조합 반환
@@ -473,3 +559,174 @@ Each hook should apply a DIFFERENT psychological strategy to maximize A/B testin
                 )
 
         return results
+
+    async def generate_psychological_ab_test(
+        self,
+        product: dict,
+        pain_points: list[str],
+        count: int = 4,
+    ) -> list[dict]:
+        """
+        다차원 심리 기제 기반 A/B 테스트용 훅 세트 생성
+        """
+        if not self._gemini:
+            # 폴백: 기본 스타일들로 생성
+            styles = ["loss_aversion", "benefit", "curiosity", "social_proof"]
+            results = []
+            for i, style in enumerate(styles[:count]):
+                h = self.generate_hooks(style, product, pain_points, count=1)
+                results.append(
+                    {
+                        "hook": h[0] if h else "핵심 훅",
+                        "strategy": style,
+                        "rationale": "기본 전략 적용",
+                    }
+                )
+            return results
+
+        prompt = f"""
+### 🤖 Role: Advanced Marketing Psychologist & Copywriter
+You are an expert in behavioral economics and conversion-centered design.
+Your task is to generate {count} distinct hooks, each leveraging a fundamentally different psychological lever for A/B testing.
+
+### 📦 Product Context
+- **Name:** {product.get("name", "N/A")}
+- **Core Benefit:** {product.get("benefit", "N/A")}
+- **Pain Points:** {", ".join(pain_points[:3]) if pain_points else "N/A"}
+
+### 🎯 Objective: Multi-Pillar A/B Strategy
+Generate exactly {count} hooks covering these specific pillars:
+1. **Fear/Pain (Pillar A):** What do they lose? What happens if they don't buy? (Loss Aversion)
+2. **Gain/Dream (Pillar B):** What is the instant positive transformation? (Benefit focus)
+3. **Logic/Proof (Pillar C):** Why should they trust you? (Social Proof/Numbers)
+4. **Curiosity (Pillar D):** What's the hidden secret? (Zeigarnik Effect)
+
+### 📤 Output Format (Strict JSON)
+Output ONLY a JSON list of objects:
+[
+  {{
+    "hook": "Korean hook text (short, punchy)",
+    "strategy": "Pillar name (Fear, Gain, Logic, or Curiosity)",
+    "rationale": "Brief English explanation of why this specific psychological trigger was used."
+  }}
+]
+"""
+        try:
+            response = await self._gemini.generate_text_async(prompt)
+            # JSON 파싱
+            import json
+            import re
+
+            text = response.strip()
+            text = re.sub(r"^```(?:json)?\s*", "", text)
+            text = re.sub(r"\s*```\s*$", "", text)
+            return json.loads(text)
+        except Exception as e:
+            logger.error(f"Psychological A/B test generation failed: {e}")
+            return []
+
+    async def generate_trend_hooks(
+        self,
+        product: dict,
+        count: int = 3,
+        rag_client: Any = None,
+        length: str = "long",  # short, medium, long
+    ) -> list[str]:
+        """
+        RAG 기반 실시간 트렌드 반영 훅 생성 (밈, 뉴스, 이슈)
+        """
+        if not self._gemini or not rag_client:
+            return self.generate_hooks("curiosity", product, count=count)
+
+        # 1. 트렌드/밈 검색 (RAG)
+        # 제품 카테고리와 관련된 최신 트렌드를 검색
+        category = product.get("category", "")
+        keywords = product.get("keywords", [])
+        # 검색 쿼리 확장: 단순 카테고리뿐만 아니라 범용적인 밈 트렌드도 검색
+        search_queries = [
+            f"{category} 트렌드 이슈 {datetime.now().year}",
+            "유튜브 쇼츠 유행어 밈",
+            "인스타 릴스 챌린지 트렌드",
+            "최신 유행하는 짤방 드립",
+        ]
+
+        rag_context_lines = []
+        for q in search_queries:
+            results = rag_client.search(q, max_results=2)
+            for item in results:
+                title = item.get("title", "")
+                snippet = item.get("snippet", "")
+                rag_context_lines.append(f"- {title}: {snippet}")
+
+        trend_context = (
+            "\n".join(rag_context_lines)
+            if rag_context_lines
+            else "특이 트렌드 없음. 일반적인 대세감 활용."
+        )
+
+        log_step(
+            "트렌드 검색",
+            str(search_queries),
+            f"{len(rag_context_lines)}건 컨텍스트 확보",
+        )
+
+        # 길이 옵션에 따른 글자 수 제한 설정
+        length_guide = "Medium (20-30 chars)"
+        if length == "short":
+            length_guide = "Short (under 20 chars)"
+        elif length == "long":
+            length_guide = "Long (30-45 chars)"
+
+        # 2. 트렌드 반영 훅 생성 (LLM)
+        prompt = f"""
+### 🤖 Role: Viral Trend Hunter & Meme Specialist (Korea)
+You are a social media trend expert who knows exactly what memes and slang are viral in Korea RIGHT NOW (2024-2025).
+Your goal is to seamlessly blend the product into the hottest current trends to create viral hooks.
+
+### 📦 Product Info
+- **Name:** {product.get("name")}
+- **Category:** {category}
+- **Benefit:** {product.get("benefit")}
+
+### 🌍 Real-time Trend Context (from RAG)
+{trend_context}
+
+### 🎯 Objective
+Generate exactly {count} trendy, meme-based hooks in Korean.
+- **Aggressively use recent memes** (e.g., Kim Dong-hyun 'Stun Gun/Cicada', 'Frozen Han River cat', 'Doremi Market', 'Physical: 100' vibes) if they fit the vibe.
+- Use the provided RAG context if relevant.
+- Tone: Extremely online, Gen-Z, witty, fast-paced, high-dopamine.
+
+### 📋 Rules
+- Length: {length_guide}
+- ONE Emoji per hook
+- **Parody existing memes** creatively.
+- Format: Plain text, one per line
+
+### ✨ Style Reference (Recent Vibes)
+- "대전 아저씨(김동현)도 놀랄 {category} 효과 ㄷㄷ" (Memetic comparison)
+- "꽁꽁 얼어붙은 {category} 위로 고양이가..." (Trending format)
+- "너 T야? {category} 안 쓰는 T..." (Personality meme)
+- "폼 미쳤다... {product} 이거 실화?" (Slang)
+
+### ✨ Now generate {count} viral meme hooks.
+"""
+        try:
+            response = await self._gemini.generate_text_async(prompt)
+            hooks = [line.strip() for line in response.split("\n") if line.strip()]
+            hooks = [h for h in hooks if not h.startswith(("1.", "-", "*"))][:count]
+            # 클렌징이 덜 됐을 수 있으니 한번 더
+            final_hooks = []
+            for h in hooks:
+                clean = h.lstrip("0123456789. -*")
+                final_hooks.append(clean)
+
+            if final_hooks:
+                log_success(f"{len(final_hooks)}개 트렌드 훅 생성 완료")
+                return final_hooks
+            else:
+                return self.generate_hooks("social_proof", product, count=count)
+
+        except Exception as e:
+            logger.error(f"Trend hook generation failed: {e}")
+            return self.generate_hooks("social_proof", product, count=count)

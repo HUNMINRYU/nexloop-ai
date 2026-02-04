@@ -2,7 +2,6 @@
 제품 도메인 모델
 """
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -29,7 +28,7 @@ class Product(BaseModel):
     category: ProductCategory = Field(..., description="제품 카테고리")
     description: str = Field(..., description="제품 설명")
     target: str = Field(..., description="대상 해충/문제")
-    visual_description: Optional[str] = Field(
+    visual_description: str | None = Field(
         default=None,
         description="썸네일용 제품 시각 묘사 (예: white spray bottle with green label). 없으면 generic product packaging 사용",
     )
@@ -52,7 +51,7 @@ class ProductCatalog(BaseModel):
 
     products: list[Product] = Field(default_factory=list)
 
-    def get_by_name(self, name: str) -> Optional[Product]:
+    def get_by_name(self, name: str) -> Product | None:
         """이름으로 제품 검색"""
         return next((p for p in self.products if p.name == name), None)
 

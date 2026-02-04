@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from utils.logger import get_logger
 
@@ -19,14 +19,14 @@ class CTRFeedbackLoop:
     def __init__(self, db_session: Any = None):
         self._db = db_session
         # In-memory 저장소 (DB 없을 때)
-        self._records: List[Dict[str, Any]] = []
+        self._records: list[dict[str, Any]] = []
 
     async def record_prediction(
         self,
         video_id: str,
         predicted_ctr: float,
         model_version: str = "v1",
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """예측 CTR 기록"""
         record = {
@@ -47,7 +47,7 @@ class CTRFeedbackLoop:
 
     async def record_actual(
         self, video_id: str, actual_ctr: float
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """실제 CTR 기록 및 오차 계산"""
         if self._db is not None:
             try:
@@ -64,8 +64,8 @@ class CTRFeedbackLoop:
         return None
 
     def compute_adjustment_weights(
-        self, records: Optional[List[Dict[str, Any]]] = None
-    ) -> Dict[str, float]:
+        self, records: list[dict[str, Any]] | None = None
+    ) -> dict[str, float]:
         """오차 분석 기반 가중치 조정 추천"""
         data = records or [
             r for r in self._records if "actual_ctr" in r and "error" in r
@@ -86,7 +86,7 @@ class CTRFeedbackLoop:
             "suggested_correction": round(-avg_error * 0.5, 4),
         }
 
-    async def _save_prediction_to_db(self, record: Dict[str, Any]) -> None:
+    async def _save_prediction_to_db(self, record: dict[str, Any]) -> None:
         from infrastructure.database.models import CTRFeedback
 
         row = CTRFeedback(
@@ -100,8 +100,9 @@ class CTRFeedbackLoop:
 
     async def _update_actual_in_db(
         self, video_id: str, actual_ctr: float
-    ) -> Optional[Dict[str, Any]]:
-        from sqlalchemy import select, desc
+    ) -> dict[str, Any] | None:
+        from sqlalchemy import desc, select
+
         from infrastructure.database.models import CTRFeedback
 
         stmt = (

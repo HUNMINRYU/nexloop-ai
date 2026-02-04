@@ -3,7 +3,7 @@
 """
 from datetime import datetime
 from enum import Enum
-from typing import Any, ClassVar, Optional, Tuple
+from typing import Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
@@ -73,7 +73,7 @@ class PipelineConfig(BaseModel):
 class PipelineProgress(BaseModel):
     """파이프라인 실행 진행 상황"""
 
-    STEP_ORDER: ClassVar[Tuple[PipelineStep, ...]] = (
+    STEP_ORDER: ClassVar[tuple[PipelineStep, ...]] = (
         PipelineStep.DATA_COLLECTION,
         PipelineStep.YOUTUBE_COLLECTION,
         PipelineStep.NAVER_COLLECTION,
@@ -183,16 +183,16 @@ class PipelineProgress(BaseModel):
 class CollectedData(BaseModel):
     """수집된 데이터"""
 
-    youtube_data: Optional[dict[str, Any]] = Field(default=None, description="YouTube 데이터")
+    youtube_data: dict[str, Any] | None = Field(default=None, description="YouTube 데이터")
     youtube_videos: list[dict[str, Any]] = Field(default_factory=list, description="YouTube 비디오 목록")
-    naver_data: Optional[dict[str, Any]] = Field(default=None, description="네이버 데이터")
+    naver_data: dict[str, Any] | None = Field(default=None, description="네이버 데이터")
     pain_points: list[dict[str, Any]] = Field(default_factory=list, description="페인 포인트")
     gain_points: list[dict[str, Any]] = Field(default_factory=list, description="게인 포인트")
     top_insights: list[dict[str, Any]] = Field(default_factory=list, description="핵심 인사이트 (X-Algorithm)")
-    quality_report: Optional[dict[str, Any]] = Field(
+    quality_report: dict[str, Any] | None = Field(
         default=None, description="데이터 품질 보고서"
     )
-    market_trends: Optional[dict[str, Any]] = Field(
+    market_trends: dict[str, Any] | None = Field(
         default=None, description="시장 트렌드 데이터"
     )
 
@@ -202,12 +202,12 @@ class GeneratedContent(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    thumbnail_data: Optional[bytes] = Field(default=None, description="썸네일 이미지 바이트")
-    thumbnail_url: Optional[str] = Field(default=None, description="썸네일 URL")
+    thumbnail_data: bytes | None = Field(default=None, description="썸네일 이미지 바이트")
+    thumbnail_url: str | None = Field(default=None, description="썸네일 URL")
     multi_thumbnails: list[dict[str, Any]] = Field(default_factory=list, description="다중 썸네일")
-    video_bytes: Optional[bytes] = Field(default=None, description="비디오 바이트")
-    video_path: Optional[str] = Field(default=None, description="비디오 경로")
-    video_url: Optional[str] = Field(default=None, description="비디오 URL")
+    video_bytes: bytes | None = Field(default=None, description="비디오 바이트")
+    video_path: str | None = Field(default=None, description="비디오 경로")
+    video_url: str | None = Field(default=None, description="비디오 URL")
 
 
 class PipelineResult(BaseModel):
@@ -217,14 +217,14 @@ class PipelineResult(BaseModel):
 
     success: bool = Field(..., description="success flag")
     product_name: str = Field(..., description="product name")
-    config: Optional[PipelineConfig] = Field(default=None, description="pipeline config")
-    collected_data: Optional[CollectedData] = Field(default=None, description="collected data")
-    strategy: Optional[dict[str, Any]] = Field(default=None, description="strategy")
-    generated_content: Optional[GeneratedContent] = Field(default=None, description="generated content")
-    prompt_log: Optional[dict[str, Any]] = Field(default=None, description="prompt log")
+    config: PipelineConfig | None = Field(default=None, description="pipeline config")
+    collected_data: CollectedData | None = Field(default=None, description="collected data")
+    strategy: dict[str, Any] | None = Field(default=None, description="strategy")
+    generated_content: GeneratedContent | None = Field(default=None, description="generated content")
+    prompt_log: dict[str, Any] | None = Field(default=None, description="prompt log")
     approval_status: str = Field(default="draft", description="approval status")
     audit_trail: list[dict[str, Any]] = Field(default_factory=list, description="audit trail")
-    error_message: Optional[str] = Field(default=None, description="error message")
+    error_message: str | None = Field(default=None, description="error message")
     upload_status: UploadStatus = Field(
         default=UploadStatus.SKIPPED,
         description="GCS upload status",

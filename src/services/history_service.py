@@ -7,7 +7,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from core.models.pipeline import (
     PipelineResult,
@@ -21,10 +21,10 @@ logger = get_logger(__name__)
 class HistoryService:
     """분석 히스토리 관리 서비스"""
 
-    def __init__(self, base_dir: Optional[Path] = None):
+    def __init__(self, base_dir: Path | None = None):
         self._base_dir = base_dir
 
-    def get_history_list(self) -> List[Dict[str, Any]]:
+    def get_history_list(self) -> list[dict[str, Any]]:
         """저장된 히스토리 목록 반환 (최신순)"""
         try:
             meta_dir = ensure_output_dir(self._base_dir) / "metadata"
@@ -54,7 +54,7 @@ class HistoryService:
             logger.error(f"히스토리 목록 조회 실패: {e}")
             return []
 
-    def load_history(self, history_id: str) -> Optional[PipelineResult]:
+    def load_history(self, history_id: str) -> PipelineResult | None:
         """특정 히스토리 로드 및 PipelineResult 객체로 복원"""
         try:
             meta_dir = ensure_output_dir(self._base_dir) / "metadata"
@@ -114,7 +114,7 @@ class HistoryService:
             data = result.model_dump()
 
             # 대용량 바이트 데이터는 저장 시 제외 (이미 별도 파일로 저장됨)
-            if "generated_content" in data and data["generated_content"]:
+            if data.get("generated_content"):
                 data["generated_content"].pop("thumbnail_data", None)
                 data["generated_content"].pop("video_bytes", None)
 

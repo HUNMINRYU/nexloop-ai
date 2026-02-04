@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import math
-from typing import List, Optional
 
 from services.pipeline.stages.user_profile import UserProfile
 from services.pipeline.types import Candidate
@@ -44,7 +43,7 @@ def _profile_to_vector(profile: UserProfile) -> list[float]:
 
 
 def _dot_product(a: list[float], b: list[float]) -> float:
-    return sum(x * y for x, y in zip(a, b))
+    return sum(x * y for x, y in zip(a, b, strict=False))
 
 
 def _magnitude(v: list[float]) -> float:
@@ -65,11 +64,11 @@ class SimilarityReranker:
     final = alpha * original_score + (1 - alpha) * similarity_score
     """
 
-    def __init__(self, profile: Optional[UserProfile] = None, alpha: float = 0.7):
+    def __init__(self, profile: UserProfile | None = None, alpha: float = 0.7):
         self.profile = profile
         self.alpha = alpha
 
-    async def rerank(self, candidates: List[Candidate]) -> List[Candidate]:
+    async def rerank(self, candidates: list[Candidate]) -> list[Candidate]:
         """프로필 기반 리랭킹 (프로필 없으면 원본 반환)"""
         if self.profile is None or not self.profile.preferred_features:
             return candidates

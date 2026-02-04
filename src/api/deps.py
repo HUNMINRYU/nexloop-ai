@@ -1,9 +1,12 @@
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import Depends, Header, HTTPException
 
 from config.dependencies import get_services
 from infrastructure.database.connection import get_db_session
+
+if TYPE_CHECKING:
+    from src.infrastructure.clients.scheduler_client import CloudSchedulerClient
 
 
 async def get_current_user(
@@ -55,6 +58,7 @@ def require_role(roles: list[str]):
 def get_scheduler_client() -> "CloudSchedulerClient":
     """CloudSchedulerClient 의존성 주입"""
     import os
+
     from src.infrastructure.clients.scheduler_client import CloudSchedulerClient
 
     project_id = os.getenv("GOOGLE_CLOUD_PROJECT_ID")

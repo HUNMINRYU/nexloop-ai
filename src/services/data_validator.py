@@ -2,7 +2,6 @@
 데이터 품질 검증 로직
 """
 
-from typing import List
 import re
 
 from pydantic import BaseModel, Field, field_validator
@@ -35,9 +34,9 @@ class DataQualityReport(BaseModel):
 
 
 def validate_comments(
-    raw_comments: List[dict],
-) -> tuple[List[ValidatedComment], DataQualityReport]:
-    valid: List[ValidatedComment] = []
+    raw_comments: list[dict],
+) -> tuple[list[ValidatedComment], DataQualityReport]:
+    valid: list[ValidatedComment] = []
     rejected = 0
     for comment in raw_comments:
         try:

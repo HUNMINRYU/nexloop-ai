@@ -1,5 +1,4 @@
 import re
-from typing import List, Set
 
 from services.pipeline.types import Candidate
 
@@ -7,9 +6,9 @@ from services.pipeline.types import Candidate
 class MutedKeywordFilter:
     """특정 키워드 포함 콘텐츠 제거 (word boundary 기반 정확 매칭)"""
 
-    DEFAULT_MUTED: Set[str] = {"광고", "홍보", "스팸", "카톡", "텔레그램", "링크"}
+    DEFAULT_MUTED: set[str] = {"광고", "홍보", "스팸", "카톡", "텔레그램", "링크"}
 
-    def __init__(self, keywords: Set[str] | None = None):
+    def __init__(self, keywords: set[str] | None = None):
         self.keywords = keywords or self.DEFAULT_MUTED
         # 각 키워드에 대해 word boundary 패턴 컴파일
         # 한국어는 \b가 제대로 동작하지 않을 수 있으므로
@@ -22,7 +21,7 @@ class MutedKeywordFilter:
             for kw in self.keywords
         ]
 
-    def filter(self, candidates: List[Candidate]) -> List[Candidate]:
+    def filter(self, candidates: list[Candidate]) -> list[Candidate]:
         return [c for c in candidates if not self._contains_muted(c)]
 
     def _contains_muted(self, candidate: Candidate) -> bool:

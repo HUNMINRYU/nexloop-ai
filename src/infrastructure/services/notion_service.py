@@ -2,7 +2,7 @@
 Notion Export Service
 """
 
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 import requests
 
@@ -17,7 +17,7 @@ class NotionService(ExportPort):
 
     NOTION_API_URL = "https://api.notion.com/v1"
 
-    def __init__(self, api_key: str, database_id: str = None):
+    def __init__(self, api_key: str, database_id: str | None = None):
         self._api_key = api_key
         self._database_id = database_id
         self._headers = {
@@ -30,7 +30,7 @@ class NotionService(ExportPort):
         """설정 확인"""
         return bool(self._api_key)
 
-    def export(self, data: Dict[str, Any], output_path: str = None) -> str:
+    def export(self, data: dict[str, Any], output_path: str | None = None) -> str:
         """분석 결과를 Notion 페이지로 생성"""
         if not self.is_configured():
             raise ValueError("Notion API Key is not configured")
@@ -94,11 +94,11 @@ class NotionService(ExportPort):
             summary = analysis.get("summary", "")
             if summary:
                 children.append(self._create_quote_block(summary))
-                
+
             # [NEW] 생성된 콘텐츠 (미디어)
             gen_content = data.get("generated_content", {})
             has_media = False
-            
+
             # 썸네일 이미지
             thumb_url = gen_content.get("thumbnail_url")
             if thumb_url and thumb_url.startswith("http"):
@@ -107,7 +107,7 @@ class NotionService(ExportPort):
                     has_media = True
                 children.append(self._create_paragraph_block("썸네일 미리보기:", bold=True))
                 children.append(self._create_image_block(thumb_url))
-                
+
             # 비디오
             video_url = gen_content.get("video_url")
             if video_url and video_url.startswith("http"):
@@ -121,18 +121,18 @@ class NotionService(ExportPort):
             sns_posts = gen_content.get("social_posts") or gen_content.get("sns_posts")
             if sns_posts and isinstance(sns_posts, dict):
                 children.append(self._create_subheader_block("📱 SNS 마케팅 소재"))
-                
+
                 for platform, content in sns_posts.items():
                     platform_name = platform.upper()
                     item_text = f"{platform_name} 포스팅 초안"
-                    
+
                     # 내용 파싱
                     body_text = ""
                     if isinstance(content, dict):
                         # 제목이 있으면 추가 (블로그 등)
                         if "title" in content:
                             body_text += f"제목: {content['title']}\n\n"
-                        
+
                         # 본문/캡션
                         body_parts = [
                             content.get("caption", ""),
@@ -142,7 +142,7 @@ class NotionService(ExportPort):
                         # 비어있지 않은 첫 번째 값 사용
                         main_text = next((t for t in body_parts if t), str(content))
                         body_text += main_text
-                        
+
                         # 해시태그 처리
                         hashtags = content.get("hashtags")
                         if hashtags:
@@ -154,7 +154,7 @@ class NotionService(ExportPort):
                         body_text = str(content)
 
                     # 토글 블록 생성
-                    # 주의: Notion API 제약상 토글 내부 콘텐츠는 별도 API 호출이 필요할 수 있으나, 
+                    # 주의: Notion API 제약상 토글 내부 콘텐츠는 별도 API 호출이 필요할 수 있으나,
                     # 페이지 생성(Create Page) 시에는 children 중첩이 허용됨.
                     toggle_children = [self._create_paragraph_block(body_text)]
                     children.append(self._create_toggle_block(item_text, toggle_children))
@@ -177,8 +177,8 @@ class NotionService(ExportPort):
                         break
                 if not title_prop:
                     title_prop = "Name" # Fallback
-                    
-                properties = cast(Dict[str, Any], {
+
+                properties = cast(dict[str, Any], {
                     title_prop: {
                         "title": [{"text": {"content": f"{product_name} 리포트"}}]
                     }
@@ -233,7 +233,7 @@ class NotionService(ExportPort):
         safe_text = str(text)
         if len(safe_text) > 2000:
             safe_text = safe_text[:1997] + "..."
-            
+
         return {
             "object": "block",
             "type": "paragraph",

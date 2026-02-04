@@ -57,7 +57,7 @@ class SchedulerService:
                 payload=payload,
             )
         except Exception as e:
-            raise ValueError(f"Cloud Scheduler Job 생성 실패: {str(e)}") from e
+            raise ValueError(f"Cloud Scheduler Job 생성 실패: {e!s}") from e
 
         # DB 저장
         schedule = PipelineSchedule(
@@ -117,7 +117,7 @@ class SchedulerService:
         try:
             self.scheduler.update_job(schedule.gcp_job_id, cron, payload)
         except Exception as e:
-            raise ValueError(f"Cloud Scheduler Job 업데이트 실패: {str(e)}") from e
+            raise ValueError(f"Cloud Scheduler Job 업데이트 실패: {e!s}") from e
 
         # DB 업데이트
         schedule.name = req.name
@@ -178,7 +178,7 @@ class SchedulerService:
             else:
                 self.scheduler.pause_job(schedule.gcp_job_id)
         except Exception as e:
-            raise ValueError(f"Cloud Scheduler Job 상태 변경 실패: {str(e)}") from e
+            raise ValueError(f"Cloud Scheduler Job 상태 변경 실패: {e!s}") from e
 
         # DB 업데이트
         schedule.enabled = enabled

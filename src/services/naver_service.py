@@ -3,7 +3,7 @@
 네이버 쇼핑 데이터 수집 비즈니스 로직
 """
 
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from core.exceptions import DataCollectionError
 from core.interfaces.api_client import INaverClient
@@ -40,7 +40,7 @@ class NaverService:
             raise DataCollectionError(
                 "네이버 검색 실패",
                 original_error=e,
-            )
+            ) from e
 
     def analyze_competitors(self, products: list[dict]) -> dict:
         """경쟁사 분석"""
@@ -57,7 +57,7 @@ class NaverService:
             return results
         except Exception as e:
             log_error(f"네이버 블로그 검색 실패: {e}")
-            raise DataCollectionError("네이버 블로그 검색 실패", original_error=e)
+            raise DataCollectionError("네이버 블로그 검색 실패", original_error=e) from e
 
     @cached(ttl=600, cache_key_prefix="naver_news")
     @retry_on_error(max_attempts=3, base_delay=1.0, max_delay=8.0)
@@ -70,14 +70,14 @@ class NaverService:
             return results
         except Exception as e:
             log_error(f"네이버 뉴스 검색 실패: {e}")
-            raise DataCollectionError("네이버 뉴스 검색 실패", original_error=e)
+            raise DataCollectionError("네이버 뉴스 검색 실패", original_error=e) from e
 
     @retry_on_error(max_attempts=3, base_delay=1.0, max_delay=8.0)
     def collect_product_data(
         self,
         product: dict,
         max_results: int = 10,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> dict:
         """제품 기반 네이버 쇼핑 데이터 수집"""
         p_name = product.get("name", "N/A")
@@ -123,7 +123,7 @@ class NaverService:
             raise DataCollectionError(
                 f"네이버 쇼핑 데이터 수집 실패: {e}",
                 original_error=e,
-            )
+            ) from e
 
     def get_price_summary(self, products: list[dict]) -> str:
         """가격 요약 문자열 생성"""

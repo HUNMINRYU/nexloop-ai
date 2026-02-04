@@ -1,4 +1,3 @@
-from typing import List, Set
 
 from services.pipeline.types import Candidate
 
@@ -6,8 +5,8 @@ from services.pipeline.types import Candidate
 class DuplicateFilter:
     """중복 콘텐츠 제거"""
 
-    def filter(self, candidates: List[Candidate]) -> List[Candidate]:
-        seen: Set[str] = set()
+    def filter(self, candidates: list[Candidate]) -> list[Candidate]:
+        seen: set[str] = set()
         result = []
         for c in candidates:
             text = c.content.strip()

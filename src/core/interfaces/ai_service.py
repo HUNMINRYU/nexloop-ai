@@ -2,7 +2,8 @@
 AI 서비스 인터페이스 정의
 """
 from abc import abstractmethod
-from typing import Any, Callable, Optional, Protocol, runtime_checkable
+from collections.abc import Callable
+from typing import Any, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -52,9 +53,9 @@ class IMarketingAIService(ITextGenerationService, IImageGenerationService, Proto
         youtube_data: dict,
         naver_data: dict,
         product_name: str,
-        top_insights: list[dict] = None,
+        top_insights: list[dict] | None = None,
         market_trends: dict | None = None,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
         use_search_grounding: bool = True,
     ) -> dict[str, Any]:
         """마케팅 데이터 분석"""
@@ -64,7 +65,7 @@ class IMarketingAIService(ITextGenerationService, IImageGenerationService, Proto
     def generate_marketing_strategy(
         self,
         collected_data: dict,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> dict[str, Any]:
         """마케팅 전략 생성"""
         ...
@@ -75,8 +76,8 @@ class IMarketingAIService(ITextGenerationService, IImageGenerationService, Proto
         product: dict,
         hook_text: str,
         style: str = "????",
-        style_modifier: Optional[str] = None,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        style_modifier: str | None = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> bytes | None:
         """??? ??? ??"""
         ...
@@ -87,7 +88,7 @@ class IMarketingAIService(ITextGenerationService, IImageGenerationService, Proto
         product: dict,
         hook_texts: list[str],
         styles: list[str] | None = None,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> list[dict]:
         """다중 썸네일 생성"""
         ...

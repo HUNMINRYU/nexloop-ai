@@ -7,14 +7,17 @@ import asyncio
 import json
 import re
 import time
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 from config.constants import HOOK_TEMPLATES, HOOK_TYPES
-from core.prompts import prompt_registry
-from core.prompts import marketing_prompts  # noqa: F401
 from core.exceptions import GeminiAPIError
-from utils.logger import get_logger, log_llm_fail, log_llm_request, log_llm_response
+from core.prompts import (
+    marketing_prompts,  # noqa: F401
+    prompt_registry,
+)
 from utils.cache import cached
+from utils.logger import get_logger, log_llm_fail, log_llm_request, log_llm_response
 from utils.retry import retry_on_error
 
 logger = get_logger(__name__)
@@ -101,6 +104,15 @@ class GeminiClient:
         log_llm_fail("텍스트 생성(비동기)", str(last_error))
         return ""
 
+    async def generate_text_async(
+        self,
+        prompt: str,
+        temperature: float = 0.7,
+        max_retries: int = 3,
+    ) -> str:
+        """generate_content_async 별칭 (호환성 유지)"""
+        return await self.generate_content_async(prompt, temperature, max_retries)
+
     @cached(ttl=3600, cache_key_prefix="gemini")
     @retry_on_error(max_attempts=3, base_delay=1.0, max_delay=8.0)
     def generate_text(
@@ -111,8 +123,9 @@ class GeminiClient:
     ) -> str:
         """텍스트 생성 (재시도 로직 적용)"""
         import time as _time
+
         start_time = _time.time()
-        
+
         log_llm_request(
             "텍스트 생성",
             details=f"temperature={temperature}, grounding={use_grounding}",
@@ -139,7 +152,7 @@ class GeminiClient:
 
             response = self.retry_with_backoff(_api_call)
             elapsed_ms = (_time.time() - start_time) * 1000
-            
+
             response_text = response.text if response and response.text else ""
             log_llm_response(
                 "텍스트 생성",
@@ -151,7 +164,7 @@ class GeminiClient:
 
         except Exception as e:
             log_llm_fail("텍스트 생성", str(e), model=self._text_model)
-            raise GeminiAPIError(f"텍스트 생성 실패: {e}")
+            raise GeminiAPIError(f"텍스트 생성 실패: {e}") from e
 
     @retry_on_error(max_attempts=3, base_delay=1.0, max_delay=8.0)
     def generate_image(
@@ -161,8 +174,9 @@ class GeminiClient:
     ) -> bytes | None:
         """이미지 생성 (Retry 적용) (genesis_kr/v3 방식: generate_content + response_modalities)"""
         import time as _time
+
         start_time = _time.time()
-        
+
         log_llm_request(
             "이미지 생성",
             details=f"aspect_ratio={aspect_ratio}",
@@ -208,7 +222,7 @@ class GeminiClient:
 
         except Exception as e:
             log_llm_fail("이미지 생성", str(e), model=self._image_model)
-            raise GeminiAPIError(f"이미지 생성 실패: {e}")
+            raise GeminiAPIError(f"이미지 생성 실패: {e}") from e
 
     @cached(ttl=7200, cache_key_prefix="gemini")
     @retry_on_error(max_attempts=3, base_delay=1.0, max_delay=8.0)
@@ -217,13 +231,14 @@ class GeminiClient:
         youtube_data: dict,
         naver_data: dict,
         product_name: str,
-        top_insights: list[dict] = None,
+        top_insights: list[dict] | None = None,
         market_trends: dict | None = None,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
         use_search_grounding: bool = True,
     ) -> dict[str, Any]:
         """마케팅 데이터 분석 (Retry & Validation 강화)"""
         import time as _time
+
         start_time = _time.time()
 
         try:
@@ -292,7 +307,7 @@ class GeminiClient:
 
             result = self._validate_json_output(response.text)
             response_text = response.text if response and response.text else ""
-            
+
             log_llm_response(
                 "마케팅 분석",
                 details=f"JSON {len(response_text)}자 수신",
@@ -314,7 +329,7 @@ class GeminiClient:
     def generate_marketing_strategy(
         self,
         collected_data: dict,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> dict[str, Any]:
         """마케팅 전략 생성"""
         product = collected_data.get("product", {})
@@ -342,7 +357,7 @@ class GeminiClient:
         style: str = "드라마틱",
         color_scheme: str = "블루 그라디언트",
         layout: str = "중앙 집중형",
-        style_modifier: Optional[str] = None,
+        style_modifier: str | None = None,
         aspect_ratio: str = "16:9",
     ) -> str:
         """마케팅 이미지 생성 프롬프트 빌드"""
@@ -407,12 +422,13 @@ Your mission: Create a thumbnail that stops the scroll and drives immediate purc
         product: dict,
         hook_text: str,
         style: str = "드라마틱",
-        style_modifier: Optional[str] = None,
+        style_modifier: str | None = None,
         aspect_ratio: str = "16:9",
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> bytes | None:
         """마케팅 썸네일 생성"""
         import time as _time
+
         start_time = _time.time()
         p_name = product.get("name", "N/A")
 
@@ -468,7 +484,7 @@ Your mission: Create a thumbnail that stops the scroll and drives immediate purc
         product: dict,
         hook_texts: list[str],
         styles: list[str] | None = None,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> list[dict]:
         """다중 썸네일 생성"""
         p_name = product.get("name", "N/A")
@@ -546,7 +562,7 @@ Your mission: Create a thumbnail that stops the scroll and drives immediate purc
 
         return unique_hooks
 
-    def _extract_first_json_object(self, text: str) -> Optional[str]:
+    def _extract_first_json_object(self, text: str) -> str | None:
         """첫 번째 완전한 { ... } 블록만 추출 (중첩 괄호 대응)."""
         start = text.find("{")
         if start == -1:

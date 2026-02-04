@@ -5,6 +5,7 @@ Applied Skills:
 - Self-Verification Pattern
 - Data Prioritization (X-Algorithm > Market Trends > Platform Data)
 """
+
 from __future__ import annotations
 
 from core.prompts import PromptTemplate, prompt_registry
@@ -24,8 +25,8 @@ Your analysis should enable the marketing team to **take immediate action** base
 1. **Customer-Centric First:** Always start from the customer's perspective. What do they need? What do they fear? What motivates them?
 2. **Data Hierarchy:** Prioritize insights in this order:
    - 🥇 X-Algorithm Insights (Real customer voice) → HIGHEST WEIGHT
-   - 🥈 YouTube/Social Data (Engagement patterns) → HIGH WEIGHT
-   - 🥉 Market Trends & Naver Data (Context) → SUPPORTING WEIGHT
+   - 🥈 Video/Social Data (Engagement & viral patterns) → HIGH WEIGHT
+   - 🥉 Market Trends & Search Data (Context) → SUPPORTING WEIGHT
 3. **Actionable Output:** Every insight must lead to a clear, implementable next step.
 4. **Progressive Disclosure:** Lead with executive summary, then dive into details.
 
@@ -40,7 +41,7 @@ Your analysis should enable the marketing team to **take immediate action** base
 ### Target Product
 **Product Name:** {product_name}
 
-### 🥈 YouTube Landscape (Competitor Videos & Trends)
+### 🥈 Video & Social Landscape (Competitor Content & Viral Trends)
 {youtube_data_json}
 
 ### 🥉 Market Trends (GCP Search Results)
@@ -158,29 +159,28 @@ Output ONLY the following JSON structure. Ensure all text is in Korean (한국�
     }},
     "hook_suggestions": [
         {{
-            "hook": "X-Algorithm 인사이트를 반영한 훅 문구 1",
-            "insight_reference": "이 훅의 근거가 된 고객 인사이트",
-            "target_emotion": "목표 감정 (예: FOMO, Curiosity, Desire)"
+            "hook": "원본 훅 문구 (인사이트 반영)",
+            "strategy": "Fear / Loss Aversion (손실 회피 - 문제 해결 강조)",
+            "insight_reference": "근거 인사이트",
+            "ab_test_role": "Pest-Control Expert Persona"
         }},
         {{
-            "hook": "훅 문구 2",
+            "hook": "대안 훅 문구 1",
+            "strategy": "Instant Benefit / Gain (즉각적 혜택 - 꿈의 결과 강조)",
             "insight_reference": "근거 인사이트",
-            "target_emotion": "목표 감정"
+            "ab_test_role": "Satisfied Customer Persona"
         }},
         {{
-            "hook": "훅 문구 3",
+            "hook": "대안 훅 문구 2",
+            "strategy": "Curiosity / Zeigarnik (호기심 - 클릭 유발)",
             "insight_reference": "근거 인사이트",
-            "target_emotion": "목표 감정"
+            "ab_test_role": "Mystery/Teaser style"
         }},
         {{
-            "hook": "훅 문구 4",
+            "hook": "대안 훅 문구 3",
+            "strategy": "Social Proof / Authority (사회적 증명/권위)",
             "insight_reference": "근거 인사이트",
-            "target_emotion": "목표 감정"
-        }},
-        {{
-            "hook": "훅 문구 5",
-            "insight_reference": "근거 인사이트",
-            "target_emotion": "목표 감정"
+            "ab_test_role": "Community/Expert Voice"
         }}
     ],
     "keywords": {{

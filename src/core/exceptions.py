@@ -4,7 +4,7 @@
 """
 
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class ErrorCode(Enum):
@@ -44,7 +44,7 @@ class ErrorSeverity(Enum):
 
 
 # 사용자 친화적 에러 메시지 매핑
-USER_FRIENDLY_MESSAGES: Dict[ErrorCode, str] = {
+USER_FRIENDLY_MESSAGES: dict[ErrorCode, str] = {
     ErrorCode.AUTH_FAILED: "인증에 실패했습니다. API 키를 확인해주세요.",
     ErrorCode.CONFIG_MISSING: "설정 파일(.env)이 누락되었습니다. 설정을 확인해주세요.",
     ErrorCode.API_KEY_INVALID: "API 키가 유효하지 않습니다. 올바른 키를 입력해주세요.",
@@ -62,7 +62,7 @@ USER_FRIENDLY_MESSAGES: Dict[ErrorCode, str] = {
 }
 
 # 해결 방법 힌트 매핑
-SOLUTION_HINTS: Dict[ErrorCode, str] = {
+SOLUTION_HINTS: dict[ErrorCode, str] = {
     ErrorCode.AUTH_FAILED: "💡 .env 파일에서 API 키가 올바르게 설정되어 있는지 확인하세요.",
     ErrorCode.CONFIG_MISSING: "💡 프로젝트 루트에 .env 파일이 있는지 확인하세요.",
     ErrorCode.API_KEY_INVALID: "💡 Google Cloud Console 또는 해당 서비스에서 새 API 키를 발급받으세요.",
@@ -81,11 +81,11 @@ class NexloopError(Exception):
     def __init__(
         self,
         code: ErrorCode = ErrorCode.UNKNOWN_ERROR,
-        message: Optional[str] = None,
-        original_error: Optional[Exception] = None,
-        details: Optional[Dict[str, Any]] = None,
+        message: str | None = None,
+        original_error: Exception | None = None,
+        details: dict[str, Any] | None = None,
         severity: ErrorSeverity = ErrorSeverity.PERMANENT,
-        retry_after: Optional[float] = None,
+        retry_after: float | None = None,
     ):
         self.code = code
         self.original_error = original_error
@@ -123,7 +123,7 @@ class NexloopError(Exception):
         """재시도 가능 여부"""
         return self.severity != ErrorSeverity.PERMANENT
 
-    def get_retry_delay(self) -> Optional[float]:
+    def get_retry_delay(self) -> float | None:
         """재시도 대기 시간"""
         return self.retry_after
 
@@ -132,7 +132,7 @@ class APIError(NexloopError):
     """API 관련 에러"""
 
     def __init__(
-        self, service_name: str, original_error: Optional[Exception] = None, **kwargs
+        self, service_name: str, original_error: Exception | None = None, **kwargs
     ):
         self.service_name = service_name
         super().__init__(
@@ -148,7 +148,7 @@ class YouTubeAPIError(APIError):
     def __init__(
         self,
         message: str = "YouTube API 호출에 실패했습니다.",
-        details: dict = None,
+        details: dict | None = None,
         **kwargs,
     ):
         super().__init__(service_name="YouTube", **kwargs)
@@ -163,7 +163,7 @@ class NaverAPIError(APIError):
     def __init__(
         self,
         message: str = "Naver API 호출에 실패했습니다.",
-        details: dict = None,
+        details: dict | None = None,
         **kwargs,
     ):
         super().__init__(service_name="Naver", **kwargs)
@@ -373,10 +373,7 @@ def handle_error(error: Exception, context: str = "") -> str:
     Returns:
         사용자에게 표시할 에러 메시지
     """
-    if isinstance(error, NexloopError):
-        nexloop_error = error
-    else:
-        nexloop_error = classify_error(error)
+    nexloop_error = error if isinstance(error, NexloopError) else classify_error(error)
 
     # 컨텍스트가 있으면 메시지에 추가
     if context:

@@ -41,7 +41,7 @@ class RagIngestionService:
         docs: list[dict[str, Any]] = []
         now_iso = self._now_iso()
         seen: set[str] = set()
-        for idx, item in enumerate(results):
+        for _idx, item in enumerate(results):
             title = self._coerce_text(item.get("title") or query, limit=256)
             snippet = self._coerce_text(item.get("snippet") or "", limit=1500)
             url = self._coerce_text(item.get("url") or "", limit=500)

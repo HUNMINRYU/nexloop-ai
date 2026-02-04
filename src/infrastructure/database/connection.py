@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import os
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import AsyncIterator
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -33,7 +33,7 @@ async def get_db_session() -> AsyncIterator[AsyncSession]:
         yield session
 
 
-def _migrate_users_columns(sync_conn):  # noqa: ANN001
+def _migrate_users_columns(sync_conn):
     """기존 users 테이블에 role/role_id/team_id 컬럼이 없으면 추가 (스키마 이전 대응)."""
     try:
         result = sync_conn.execute(text("PRAGMA table_info(users)"))
@@ -62,7 +62,7 @@ def _migrate_users_columns(sync_conn):  # noqa: ANN001
 
 async def _seed_initial_data(async_conn):
     """기본 역할(role) 데이터를 삽입합니다."""
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timedelta, timezone
 
     # Role 모델은 admin.py나 models.py에 정의되어 있지만,
     # 여기서는 초기화를 위해 직접 SQL 또는 metadata를 사용합니다.

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from services.pipeline.side_effects import SideEffectManager
 from services.pipeline.stages.diversity_scorer import AuthorDiversityScorer
@@ -30,10 +30,10 @@ class PipelineOrchestrator:
         quality_filter: QualityFilter,
         scorer: EngagementScorer,
         selector: TopInsightSelector,
-        diversity_scorer: Optional[AuthorDiversityScorer] = None,
-        multi_diversity_scorer: Optional[MultiDiversityScorer] = None,
+        diversity_scorer: AuthorDiversityScorer | None = None,
+        multi_diversity_scorer: MultiDiversityScorer | None = None,
         reranker: Any = None,
-        side_effects: Optional[SideEffectManager] = None,
+        side_effects: SideEffectManager | None = None,
         use_multi_diversity: bool = False,
     ):
         self.source = source
@@ -47,8 +47,8 @@ class PipelineOrchestrator:
         self.side_effects = side_effects or SideEffectManager()
         self.use_multi_diversity = use_multi_diversity
 
-    async def run_pipeline(self, raw_data: List[Dict[str, Any]]) -> Dict[str, Any]:
-        stats: Dict[str, Any] = {}
+    async def run_pipeline(self, raw_data: list[dict[str, Any]]) -> dict[str, Any]:
+        stats: dict[str, Any] = {}
 
         # 1. Source: Raw Data -> Candidate 변환
         candidates = self.source.item_to_candidate(raw_data)
@@ -119,8 +119,8 @@ class PipelineOrchestrator:
         self,
         stage_name: str,
         fn: Any,
-        candidates: List[Candidate],
-    ) -> List[Candidate]:
+        candidates: list[Candidate],
+    ) -> list[Candidate]:
         """동기 stage를 안전하게 실행 (실패 시 backup 사용)"""
         backup = list(candidates)
         try:
@@ -136,8 +136,8 @@ class PipelineOrchestrator:
         self,
         stage_name: str,
         fn: Any,
-        candidates: List[Candidate],
-    ) -> List[Candidate]:
+        candidates: list[Candidate],
+    ) -> list[Candidate]:
         """비동기 stage를 안전하게 실행 (실패 시 backup 사용)"""
         backup = list(candidates)
         try:

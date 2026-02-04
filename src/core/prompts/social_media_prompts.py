@@ -1,4 +1,5 @@
 """소셜 미디어 콘텐츠 생성 프롬프트 - 프로페셔널 프롬프트 엔지니어링 적용"""
+
 from __future__ import annotations
 
 from core.prompts import PromptTemplate, prompt_registry
@@ -8,7 +9,7 @@ SOCIAL_MEDIA_PROMPT = PromptTemplate(
     template="""
 ### 🤖 Role: Senior Social Media Strategist
 You are a world-class social media marketer with deep expertise in platform-specific content optimization.
-You understand the nuances of Instagram's visual-first algorithm, Twitter/X's virality mechanics, and blog SEO principles.
+You understand the nuances of Instagram's visual-first algorithm, TikTok/Shorts/Reels' high-retention mechanics, Twitter/X's virality, and blog SEO principles.
 
 ### 🎯 Objective
 Generate highly engaging, platform-optimized content for each specified social media channel based on the provided product and strategic insights.
@@ -26,6 +27,12 @@ Each piece of content should be designed to maximize reach, engagement, and clic
 - Maximum impact in 280 characters. Punchy, provocative, or highly relatable.
 - Designed for retweets and quote-tweets. Create "shareable" statements.
 - Front-load the hook. The first 5-8 words are critical.
+
+**Short-form Video (Shorts/Reels/TikTok):**
+- Fast-paced, high-energy storytelling.
+- Use pattern interrupts every 3-5 seconds.
+- Focus on the "First 3 Seconds" hook.
+- Optimized for mobile consumption and repeat loops.
 
 **Blog:**
 - SEO-optimized title with a clear benefit proposition.
@@ -52,6 +59,11 @@ Output ONLY the following JSON structure. Ensure all text is in Korean (한국�
     "instagram": {{
         "caption": "인스타그램 캡션 (첫 줄 강력한 훅 필수, 이모지 적절히 사용)",
         "hashtags": ["#해시태그1", "#해시태그2", "#해시태그3", "#해시태그4", "#해시태그5", "#해시태그6", "#해시태그7", "#해시태그8"]
+    }},
+    "short_form": {{
+        "title": "쇼폼 제목/훅 (Shorts/Reels/TikTok용)",
+        "script_summary": "핵심 스크립트 흐름 (0-3초 훅 -> 가치 전달 -> CTA)",
+        "hashtags": ["#쇼츠", "#릴스", "#틱톡", "#트렌드"]
     }},
     "twitter": {{
         "content": "트위터/X 게시글 (280자 이내, 바이럴 유도, 핵심 훅 선두 배치)"

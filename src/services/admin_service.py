@@ -1,11 +1,13 @@
-from typing import Optional, Any
+from typing import Any
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.infrastructure.database.models import Role, Team, AuditLog
-from src.infrastructure.clients.scheduler_client import CloudSchedulerClient
-from src.services.scheduler_service import SchedulerService
+
 from src.core.audit import record_audit_log
 from src.core.interfaces.storage import IStorageService
+from src.infrastructure.clients.scheduler_client import CloudSchedulerClient
+from src.infrastructure.database.models import AuditLog, Role, Team
+from src.services.scheduler_service import SchedulerService
 
 
 class AdminService:
@@ -14,8 +16,8 @@ class AdminService:
     def __init__(
         self,
         session: AsyncSession,
-        scheduler_client: Optional[CloudSchedulerClient] = None,
-        storage_service: Optional[IStorageService] = None,
+        scheduler_client: CloudSchedulerClient | None = None,
+        storage_service: IStorageService | None = None,
     ):
         self.session = session
         self.scheduler_client = scheduler_client

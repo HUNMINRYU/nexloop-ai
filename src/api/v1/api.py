@@ -1,6 +1,16 @@
 from fastapi import APIRouter
 
-from api.v1.endpoints import admin, auth, content, insights, misc, pipeline, products, webhooks
+from api.v1.endpoints import (
+    admin,
+    auth,
+    content,
+    insights,
+    misc,
+    pipeline,
+    products,
+    studio,
+    webhooks,
+)
 
 api_router = APIRouter()
 
@@ -11,6 +21,7 @@ api_router.include_router(
     content.router, tags=["content"]
 )  # /hooks, /thumbnail, /video
 api_router.include_router(pipeline.router, prefix="/pipeline", tags=["pipeline"])
+api_router.include_router(studio.router, prefix="/studio", tags=["studio"])
 api_router.include_router(webhooks.router, tags=["webhooks"])  # /webhooks/scheduler
 api_router.include_router(misc.router, tags=["misc"])
 api_router.include_router(insights.router, tags=["insights"])

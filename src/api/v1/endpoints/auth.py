@@ -1,8 +1,9 @@
+
 from fastapi import APIRouter, Depends, Header
-from typing import Optional
-from schemas.requests import AuthLoginRequest, AuthSignupRequest
-from infrastructure.database.connection import get_db_session
+
 from config.dependencies import get_services
+from infrastructure.database.connection import get_db_session
+from schemas.requests import AuthLoginRequest, AuthSignupRequest
 
 router = APIRouter()
 
@@ -37,15 +38,15 @@ async def login(request: AuthLoginRequest, session=Depends(get_db_session)):
 
 @router.post("/logout")
 async def logout(
-    authorization: Optional[str] = Header(None),
+    authorization: str | None = Header(None),
     session=Depends(get_db_session),
 ):
     """로그아웃 - 토큰 무효화 및 로그 기록"""
     services = get_services()
-    
+
     # Bearer 토큰에서 실제 토큰 추출
     token = None
     if authorization and authorization.startswith("Bearer "):
         token = authorization[7:]
-    
+
     return await services.auth_service.logout(session=session, token=token)

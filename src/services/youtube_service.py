@@ -3,7 +3,7 @@ YouTube 서비스
 YouTube 데이터 수집 비즈니스 로직
 """
 
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from core.exceptions import DataCollectionError
 from core.interfaces.api_client import IYouTubeClient
@@ -40,7 +40,7 @@ class YouTubeService:
             raise DataCollectionError(
                 "YouTube 검색 실패",
                 original_error=e,
-            )
+            ) from e
 
     def get_video_details(self, video_id: str) -> dict | None:
         """비디오 상세 정보"""
@@ -60,7 +60,7 @@ class YouTubeService:
         product: dict,
         max_results: int = 5,
         include_comments: bool = True,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> dict:
         """제품 기반 YouTube 데이터 수집"""
         p_name = product.get("name", "N/A")
@@ -94,7 +94,7 @@ class YouTubeService:
             raise DataCollectionError(
                 f"YouTube 데이터 수집 실패: {e}",
                 original_error=e,
-            )
+            ) from e
 
     def analyze_comments(self, comments: list[dict]) -> dict:
         """댓글 분석 (페인/게인 포인트)"""

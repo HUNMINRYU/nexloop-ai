@@ -1,4 +1,5 @@
-from typing import Any, Literal
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -27,6 +28,7 @@ class HookGenerateRequest(BaseModel):
     product_name: str
     style: str = Field(..., description="심리 모델 스타일")
     count: int = Field(default=1, ge=1, le=5)
+    length: str = Field(default="long", description="Length: short, medium, long")
 
 
 class ThumbnailCompareRequest(BaseModel):
@@ -54,7 +56,8 @@ class ThumbnailCompareRequest(BaseModel):
 class VideoGenerateRequest(BaseModel):
     product_name: str
     hook_text: str
-    duration_seconds: int = Field(default=8, ge=5, le=30)
+    duration_seconds: int = Field(default=8, ge=4, le=30)
+
     resolution: str = Field(default="720p")
     camera_movement: str | None = None
     composition: str | None = None
@@ -62,6 +65,15 @@ class VideoGenerateRequest(BaseModel):
     audio_preset: str | None = None
     sfx: list[str] = Field(default_factory=list)
     ambient: str | None = None
+    custom_prompt: str | None = Field(
+        default=None, description="직접 편집한 프롬프트 (있으면 자동 생성 무시)"
+    )
+
+
+class VideoExtendRequest(BaseModel):
+    video_uri: str = Field(..., description="GCS URI or path of the source video")
+    prompt: str = Field(..., description="Prompt for the extension")
+    duration_seconds: int = Field(default=8, ge=4, le=8)
 
 
 class AnalysisTaskRequest(BaseModel):
@@ -124,13 +136,13 @@ class ScheduleRequest(BaseModel):
     description: str | None = Field(None, max_length=500, description="스케줄 설명")
 
     # 스케줄 설정
-    frequency: Literal['daily', 'weekly', 'custom'] = Field(
-        default='daily',
-        description="실행 주기: daily(매일), weekly(매주), custom(사용자 정의)"
+    frequency: Literal["daily", "weekly", "custom"] = Field(
+        default="daily",
+        description="실행 주기: daily(매일), weekly(매주), custom(사용자 정의)",
     )
     days_of_week: list[int] = Field(
         default_factory=list,
-        description="요일 목록 (0=월요일, 6=일요일), 비어있으면 매일"
+        description="요일 목록 (0=월요일, 6=일요일), 비어있으면 매일",
     )
     hour: int = Field(..., ge=0, le=23, description="실행 시간 (0-23)")
     minute: int = Field(..., ge=0, le=59, description="실행 분 (0-59)")
@@ -139,6 +151,7 @@ class ScheduleRequest(BaseModel):
     # 파이프라인 설정
     product_name: str = Field(..., description="실행할 제품명")
     pipeline_config: PipelineRequest = Field(..., description="파이프라인 설정")
+
 
 class InsightMetrics(BaseModel):
     impressions: int | None = Field(default=None, ge=0)
@@ -172,6 +185,7 @@ class InsightUploadItem(BaseModel):
 class InsightUploadRequest(BaseModel):
     items: list[InsightUploadItem]
 
+
 class NaverInsightBatchRequest(BaseModel):
     query: str = Field(..., min_length=1)
     max_results: int = Field(default=10, ge=1, le=50)
@@ -184,6 +198,7 @@ class NaverInsightBatchRequest(BaseModel):
     period_start: str | None = None
     period_end: str | None = None
 
+
 class YouTubeInsightBatchRequest(BaseModel):
     query: str = Field(..., min_length=1)
     max_results: int = Field(default=10, ge=1, le=50)
@@ -193,6 +208,7 @@ class YouTubeInsightBatchRequest(BaseModel):
     region: str | None = None
     period_start: str | None = None
     period_end: str | None = None
+
 
 class DailyReportRequest(BaseModel):
     query: str = Field(..., min_length=1)

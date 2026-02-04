@@ -20,6 +20,7 @@ export function useThumbnailStudio({
   const [compareItems, setCompareItems] = useState<any[]>([]);
   const [isComparing, setIsComparing] = useState(false);
   const [thumbError, setThumbError] = useState('');
+  const [hookLength, setHookLength] = useState('long');
 
   useEffect(() => {
     setHookText('');
@@ -29,7 +30,12 @@ export function useThumbnailStudio({
     if (!selectedProduct) return;
     setThumbError('');
     try {
-      const response = await generateHooks({ product_name: selectedProduct, style: styleKey, count: 1 });
+      const response = await generateHooks({
+        product_name: selectedProduct,
+        style: styleKey,
+        count: 1,
+        length: hookLength,
+      });
       if (response?.hooks?.length) {
         setHookText(response.hooks[0] ?? "");
       }
@@ -62,6 +68,29 @@ export function useThumbnailStudio({
     }
   };
 
+  const handleGenerateSingleThumbnail = async (styleKey: string) => {
+    if (!selectedProduct) {
+      setThumbError('제품을 선택해주세요.');
+      return;
+    }
+    setThumbError('');
+    // Don't clear compareItems, just append the new one
+    try {
+      const response = await generateThumbnailCompare({
+        product_name: selectedProduct,
+        hook_text: hookText || undefined,
+        include_text_overlay: includeTextOverlay,
+        styles: [styleKey],
+        auto_hook_per_style: false, // For single gen, we usually want the current hook
+      });
+      if (response.items && response.items.length > 0) {
+        setCompareItems((prev) => [response.items[0], ...prev]);
+      }
+    } catch (err: any) {
+      setThumbError(err.message || '썸네일 생성에 실패했습니다.');
+    }
+  };
+
   return {
     styles,
     hookStrategies,
@@ -76,5 +105,8 @@ export function useThumbnailStudio({
     thumbError,
     handleGenerateHook,
     handleCompareStyles,
+    handleGenerateSingleThumbnail,
+    hookLength,
+    setHookLength,
   };
 }

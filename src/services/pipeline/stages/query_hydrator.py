@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -11,9 +11,9 @@ class QueryContext:
     """파이프라인 실행 컨텍스트"""
 
     product_id: str = ""
-    brand_keywords: List[str] = field(default_factory=list)
-    historical_performance: Dict[str, Any] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    brand_keywords: list[str] = field(default_factory=list)
+    historical_performance: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class QueryHydrator:
@@ -24,8 +24,8 @@ class QueryHydrator:
 
     def __init__(
         self,
-        product_metadata: Optional[Dict[str, Any]] = None,
-        performance_data: Optional[Dict[str, Any]] = None,
+        product_metadata: dict[str, Any] | None = None,
+        performance_data: dict[str, Any] | None = None,
     ):
         self._product_metadata = product_metadata or {}
         self._performance_data = performance_data or {}

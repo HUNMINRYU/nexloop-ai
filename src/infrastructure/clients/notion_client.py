@@ -2,7 +2,7 @@
 Notion Export Client
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from notion_client import Client as NotionSyncClient
 
@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 class NotionClient(ExportPort):
     """Notion 내보내기 클라이언트"""
 
-    def __init__(self, api_key: str = None):
+    def __init__(self, api_key: str | None = None):
         self.api_key = api_key
         self._client = None
         if api_key:
@@ -24,7 +24,7 @@ class NotionClient(ExportPort):
     def is_configured(self) -> bool:
         return bool(self._client)
 
-    def export(self, data: Dict[str, Any], page_id: str) -> str:
+    def export(self, data: dict[str, Any], page_id: str) -> str:
         """분석 결과를 Notion 페이지의 자식 블록으로 추가"""
         if not self._client:
             raise ValueError("Notion API Key가 설정되지 않았습니다.")

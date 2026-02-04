@@ -2,7 +2,8 @@
 비디오 생성 서비스 인터페이스 정의
 """
 from abc import abstractmethod
-from typing import Callable, Optional, Protocol, runtime_checkable
+from collections.abc import Callable
+from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -15,7 +16,7 @@ class IVideoGenerator(Protocol):
         prompt: str,
         duration_seconds: int = 8,
         resolution: str = "720p",
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> bytes | str:
         """텍스트 프롬프트로 비디오 생성"""
         ...
@@ -26,7 +27,7 @@ class IVideoGenerator(Protocol):
         image_bytes: bytes,
         prompt: str,
         duration_seconds: int = 8,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> bytes | None:
         """이미지 기반 비디오 생성"""
         ...

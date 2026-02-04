@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from typing import List
 
 from services.pipeline.types import Candidate
 
@@ -10,7 +9,7 @@ class AgeFilter:
     def __init__(self, max_age_days: int = 30):
         self.max_age = timedelta(days=max_age_days)
 
-    def filter(self, candidates: List[Candidate]) -> List[Candidate]:
+    def filter(self, candidates: list[Candidate]) -> list[Candidate]:
         now = datetime.now()
         return [c for c in candidates if self._is_fresh(c, now)]
 

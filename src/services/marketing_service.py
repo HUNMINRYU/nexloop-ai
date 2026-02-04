@@ -3,7 +3,8 @@
 AI 기반 마케팅 전략 생성 비즈니스 로직
 """
 
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 from core.exceptions import StrategyGenerationError
 from core.interfaces.ai_service import IMarketingAIService
@@ -28,9 +29,9 @@ class MarketingService:
         youtube_data: dict,
         naver_data: dict,
         product_name: str,
-        top_insights: list[dict] = None,
+        top_insights: list[dict] | None = None,
         market_trends: dict | None = None,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
         use_grounding: bool = True,
     ) -> dict[str, Any]:
         """마케팅 데이터 분석"""
@@ -66,13 +67,13 @@ class MarketingService:
             raise StrategyGenerationError(
                 f"마케팅 데이터 분석 실패: {e}",
                 original_error=e,
-            )
+            ) from e
 
     def generate_strategy(
         self,
         product: dict,
         collected_data: CollectedData,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> dict[str, Any]:
         """마케팅 전략 생성"""
         log_step("마케팅 전략 수립", "시작")
@@ -104,7 +105,7 @@ class MarketingService:
             raise StrategyGenerationError(
                 f"마케팅 전략 생성 실패: {e}",
                 original_error=e,
-            )
+            ) from e
 
     def generate_hooks(
         self,

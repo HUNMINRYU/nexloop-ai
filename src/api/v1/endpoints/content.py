@@ -1,20 +1,21 @@
-from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException
-from api.deps import CurrentUser, get_current_user
+from fastapi import APIRouter, HTTPException
+
+from api.deps import CurrentUser
 from config.dependencies import get_services
 from config.products import get_product_by_name
 from core.exceptions import ThumbnailGenerationError
-from utils.gcs_store import (
-    build_gcs_prefix,
-    detect_image_ext,
-    gcs_url_for,
-    detect_video_ext,
-)
 from infrastructure.clients.veo_client import AdvancedPromptBuilder
 from schemas.requests import (
     HookGenerateRequest,
     ThumbnailCompareRequest,
     VideoGenerateRequest,
+    VideoExtendRequest,
+)
+from utils.gcs_store import (
+    build_gcs_prefix,
+    detect_image_ext,
+    detect_video_ext,
+    gcs_url_for,
 )
 from utils.logger import get_logger
 
@@ -39,11 +40,20 @@ async def generate_hooks(request: HookGenerateRequest):
     product_dict = (
         product.model_dump() if hasattr(product, "model_dump") else product.__dict__
     )
-    hooks = services.hook_service.generate_hooks(
-        style=request.style,
-        product=product_dict,
-        count=request.count,
-    )
+    if request.style == "trend":
+        hooks = await services.hook_service.generate_trend_hooks(
+            product=product_dict,
+            count=request.count,
+            rag_client=services.discovery_engine_client,
+            length=request.length,
+        )
+    else:
+        hooks = services.hook_service.generate_hooks(
+            style=request.style,
+            product=product_dict,
+            count=request.count,
+            length=request.length,
+        )
     return {"hooks": hooks}
 
 
@@ -152,7 +162,7 @@ async def get_video_presets():
         "compositions": AdvancedPromptBuilder.get_compositions(),
         "lighting_moods": AdvancedPromptBuilder.get_lighting_moods(),
         "audio_presets": AdvancedPromptBuilder.get_audio_presets(),
-        "durations": [8, 15, 30],
+        "durations": [4, 6, 8],
         "resolutions": ["1080p", "720p"],
     }
 
@@ -169,28 +179,73 @@ async def generate_video(request: VideoGenerateRequest, user: CurrentUser):
         product.model_dump() if hasattr(product, "model_dump") else product.__dict__
     )
 
-    prompt_builder = AdvancedPromptBuilder()
-    prompt_builder.with_product(
-        product_dict.get("name", "제품"),
-        product_dict.get("description", ""),
-        product_dict.get("category", ""),
-    )
-    prompt_builder.with_marketing_hook(request.hook_text)
+    if request.custom_prompt:
+        # Custom Mode: Use the user-refined prompt directly
+        prompt = request.custom_prompt
+        logger.info(f"Using custom prompt for video generation: {prompt[:50]}...")
+    else:
+        # Standard Mode: Use AI to generate a high-quality structured 13-item prompt
+        # (Implements user request to apply studio-quality prompts to general mode)
+        try:
+            from services.studio_service import StudioService
 
-    if request.camera_movement:
-        prompt_builder.camera_movement = request.camera_movement
-    if request.composition:
-        prompt_builder.composition = request.composition
-    if request.lighting_mood:
-        prompt_builder.lighting_mood = request.lighting_mood
-    if request.audio_preset:
-        prompt_builder.audio_preset = request.audio_preset
-    if request.sfx:
-        prompt_builder.sfx = request.sfx
-    if request.ambient:
-        prompt_builder.ambient = request.ambient
+            studio_service = StudioService(services.gemini_client)
 
-    prompt = prompt_builder.build()
+            # Get full product context
+            product_desc = product_dict.get("description", "")
+            product_category = product_dict.get("category", "")
+            full_desc = (
+                f"{product_category} - {product_desc}"
+                if product_category
+                else product_desc
+            )
+
+            ai_result = await studio_service.generate_draft_prompts(
+                product_name=request.product_name,
+                product_desc=full_desc or "Premium product shot",
+                hook_text=request.hook_text,
+                style="Cinematic",
+                camera_movement=request.camera_movement,
+                composition=request.composition,
+                lighting_mood=request.lighting_mood,
+            )
+            prompt = ai_result.get("veo_prompt")
+
+            if not prompt or "Error generating draft" in prompt:
+                raise ValueError(
+                    "Generated AI prompt is invalid or contains error message"
+                )
+
+            logger.info(
+                f"AI successfully generated structured prompt for Standard Mode: {prompt[:50]}..."
+            )
+        except Exception as e:
+            logger.warning(
+                f"AI Prompt generation failed for Standard Mode, falling back to basic builder: {e}"
+            )
+            # Fallback to Manual Prompt Builder
+            prompt_builder = AdvancedPromptBuilder()
+            prompt_builder.with_product(
+                product_dict.get("name", "제품"),
+                product_dict.get("description", ""),
+                product_dict.get("category", ""),
+            )
+            prompt_builder.with_marketing_hook(request.hook_text)
+
+            if request.camera_movement:
+                prompt_builder.camera_movement = request.camera_movement
+            if request.composition:
+                prompt_builder.composition = request.composition
+            if request.lighting_mood:
+                prompt_builder.lighting_mood = request.lighting_mood
+            if request.audio_preset:
+                prompt_builder.audio_preset = request.audio_preset
+            if request.sfx:
+                prompt_builder.sfx = request.sfx
+            if request.ambient:
+                prompt_builder.ambient = request.ambient
+
+            prompt = prompt_builder.build()
     video_result = services.video_service.generate(
         prompt=prompt,
         duration_seconds=request.duration_seconds,
@@ -215,3 +270,49 @@ async def generate_video(request: VideoGenerateRequest, user: CurrentUser):
         return {"url": video_result, "prompt": prompt}
 
     raise HTTPException(status_code=500, detail="Video generation failed")
+
+
+@router.post("/video/extend")
+async def extend_video(request: VideoExtendRequest, user: CurrentUser):
+    services = get_services()
+    from config.settings import get_settings
+
+    settings = get_settings()
+
+    video_uri = request.video_uri
+    if not video_uri.startswith("gs://"):
+        # Assume relative path, append bucket
+        bucket = settings.gcp.gcs_bucket_name
+        video_uri = f"gs://{bucket}/{video_uri.lstrip('/')}"
+
+    video_result = services.video_service.extend_generated_video(
+        video_uri=video_uri,
+        prompt=request.prompt,
+        duration_seconds=request.duration_seconds,
+    )
+
+    if isinstance(video_result, bytes):
+        storage = services.storage_service
+        storage.ensure_bucket()
+
+        import uuid
+        from datetime import datetime
+
+        date_str = datetime.now().strftime("%Y%m%d")
+        file_id = str(uuid.uuid4())[:8]
+        ext = detect_video_ext(video_result)
+        # Organized path for extensions
+        gcs_path = f"extensions/{date_str}/ext_{file_id}{ext}"
+
+        storage.upload(
+            data=video_result,
+            path=gcs_path,
+            content_type="video/mp4" if ext == ".mp4" else "application/octet-stream",
+        )
+        url = gcs_url_for(storage, gcs_path)
+        return {"url": url, "gcs_path": gcs_path, "prompt": request.prompt}
+
+    if isinstance(video_result, str):
+        return {"url": video_result, "prompt": request.prompt}
+
+    raise HTTPException(status_code=500, detail="Video extension failed")

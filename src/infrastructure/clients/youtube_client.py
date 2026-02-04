@@ -76,7 +76,7 @@ class YouTubeClient:
 
         except Exception as e:
             logger.error(f"YouTube 검색 실패: {e}")
-            raise YouTubeAPIError(f"YouTube 검색 실패: {e}", {"query": query})
+            raise YouTubeAPIError(f"YouTube 검색 실패: {e}", {"query": query}) from e
 
     @cached(ttl=600, cache_key_prefix="youtube")
     def get_video_details(self, video_id: str) -> dict | None:

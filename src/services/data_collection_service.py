@@ -5,7 +5,7 @@ YouTube + Naver + X-Algorithm 인사이트 수집
 
 import asyncio
 import threading
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from core.models import CollectedData, PipelineConfig, PipelineStep
 from services.data_validator import validate_comments
@@ -37,7 +37,7 @@ class DataCollectionService:
         self,
         product: dict,
         config: PipelineConfig,
-        progress_callback: Optional[Callable[[PipelineStep, str], None]] = None,
+        progress_callback: Callable[[PipelineStep, str], None] | None = None,
     ) -> CollectedData:
         """전체 데이터 수집"""
         p_name = product.get("name", "N/A")

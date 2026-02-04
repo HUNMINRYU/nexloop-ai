@@ -6,8 +6,9 @@ API 응답 캐싱으로 호출 횟수를 줄이고 응답 속도를 개선합니
 import hashlib
 import json
 import time
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, Dict, Optional
+from typing import Any
 
 from utils.logger import get_logger
 
@@ -27,7 +28,7 @@ class TTLCache:
         Args:
             default_ttl: 기본 캐시 유효 시간 (초), 기본값 5분
         """
-        self._cache: Dict[str, Dict[str, Any]] = {}
+        self._cache: dict[str, dict[str, Any]] = {}
         self._default_ttl = default_ttl
 
     def _generate_key(self, *args, **kwargs) -> str:
@@ -37,7 +38,7 @@ class TTLCache:
         )
         return hashlib.md5(key_data.encode()).hexdigest()
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         """캐시에서 값 조회 (만료 시 None 반환)"""
         if key not in self._cache:
             return None
@@ -51,7 +52,7 @@ class TTLCache:
 
         return entry["value"]
 
-    def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
+    def set(self, key: str, value: Any, ttl: int | None = None) -> None:
         """캐시에 값 저장"""
         ttl = ttl or self._default_ttl
         self._cache[key] = {
@@ -85,7 +86,7 @@ class TTLCache:
         return len(expired_keys)
 
     @property
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         """캐시 통계 정보"""
         now = time.time()
         active = sum(1 for e in self._cache.values() if now <= e["expires_at"])
@@ -149,7 +150,7 @@ def cached(ttl: int = 300, cache_key_prefix: str = ""):
     return decorator
 
 
-def get_cache_stats() -> Dict[str, Any]:
+def get_cache_stats() -> dict[str, Any]:
     """전역 캐시 통계 반환"""
     return _api_cache.stats
 

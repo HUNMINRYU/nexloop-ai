@@ -4,7 +4,6 @@ Uses in-memory cache with time-based expiration.
 """
 
 from datetime import datetime, timedelta
-from typing import Dict, Tuple
 
 
 class RateLimiter:
@@ -12,7 +11,7 @@ class RateLimiter:
 
     def __init__(self):
         # Store: {ip_address: (request_count, reset_time)}
-        self._cache: Dict[str, Tuple[int, datetime]] = {}
+        self._cache: dict[str, tuple[int, datetime]] = {}
 
     def check_limit(self, ip_address: str, max_requests: int = 3, window_hours: int = 24) -> bool:
         """

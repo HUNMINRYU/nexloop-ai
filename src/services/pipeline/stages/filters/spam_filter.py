@@ -1,4 +1,4 @@
-from typing import List, Iterable
+from collections.abc import Iterable
 
 from services.pipeline.types import Candidate
 
@@ -11,7 +11,7 @@ class SpamFilter:
     def __init__(self, keywords: Iterable[str] | None = None):
         self.keywords = [kw.strip() for kw in (keywords or self.DEFAULT_KEYWORDS) if kw.strip()]
 
-    def filter(self, candidates: List[Candidate]) -> List[Candidate]:
+    def filter(self, candidates: list[Candidate]) -> list[Candidate]:
         return [c for c in candidates if not self._is_spam(c)]
 
     def _is_spam(self, candidate: Candidate) -> bool:

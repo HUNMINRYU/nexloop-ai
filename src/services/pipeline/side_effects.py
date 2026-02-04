@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Callable, Coroutine, Dict, List
+from collections.abc import Callable, Coroutine
+from typing import Any
 
 from utils.logger import get_logger
 
@@ -17,8 +18,8 @@ class SideEffectManager:
     """
 
     def __init__(self) -> None:
-        self._handlers: Dict[str, List[Callable[..., Coroutine[Any, Any, None]]]] = {}
-        self._pending_tasks: List[asyncio.Task[None]] = []
+        self._handlers: dict[str, list[Callable[..., Coroutine[Any, Any, None]]]] = {}
+        self._pending_tasks: list[asyncio.Task[None]] = []
 
     def on(
         self, event: str, handler: Callable[..., Coroutine[Any, Any, None]]

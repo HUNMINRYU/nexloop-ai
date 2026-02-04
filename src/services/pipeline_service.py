@@ -6,9 +6,8 @@
 import asyncio
 import random
 import time
-from datetime import datetime
 from collections.abc import Callable
-from typing import Optional
+from datetime import datetime
 
 from core.exceptions import PipelineError
 from core.interfaces import IStorageService
@@ -21,8 +20,18 @@ from core.models import (
     PipelineStep,
     UploadStatus,
 )
-from core.prompts import prompt_registry
-from core.prompts import marketing_prompts, social_media_prompts  # noqa: F401
+from core.prompts import (  # noqa: F401
+    marketing_prompts,
+    prompt_registry,
+    social_media_prompts,
+)
+from services.data_collection_service import DataCollectionService
+from services.history_service import HistoryService
+from services.marketing_service import MarketingService
+from services.rag_ingestion_service import RagIngestionService
+from services.social_service import SocialMediaService
+from services.thumbnail_service import THUMBNAIL_STYLES, ThumbnailService
+from services.video_service import VideoService
 from utils.gcs_store import (
     build_gcs_prefix,
     detect_image_ext,
@@ -33,27 +42,20 @@ from utils.logger import (
     get_logger,
     log_error,
     log_info,
-    log_success,
-    log_timing,
-    log_warning,
-    # 한글 상세 로깅 함수들
-    log_stage_start,
-    log_stage_end,
-    log_stage_fail,
     log_input_data,
     log_output_data,
+    log_pipeline_progress,
     log_product_context,
     log_separator,
+    log_stage_end,
+    log_stage_fail,
+    # 한글 상세 로깅 함수들
+    log_stage_start,
+    log_success,
     log_summary_box,
-    log_pipeline_progress,
+    log_timing,
+    log_warning,
 )
-from services.data_collection_service import DataCollectionService
-from services.history_service import HistoryService
-from services.marketing_service import MarketingService
-from services.rag_ingestion_service import RagIngestionService
-from services.social_service import SocialMediaService
-from services.thumbnail_service import THUMBNAIL_STYLES, ThumbnailService
-from services.video_service import VideoService
 
 logger = get_logger(__name__)
 
@@ -85,7 +87,7 @@ class PipelineService:
         self,
         product: dict,
         config: PipelineConfig,
-        progress_callback: Optional[Callable[[PipelineProgress], None]] = None,
+        progress_callback: Callable[[PipelineProgress], None] | None = None,
     ) -> PipelineResult:
         """파이프라인 실행"""
         # ===== 🚀 파이프라인 시작 - 입력 데이터 로깅 =====
@@ -413,7 +415,7 @@ class PipelineService:
         self,
         product: dict,
         config: PipelineConfig,
-        progress_callback: Optional[Callable[[str, int], None]] = None,
+        progress_callback: Callable[[str, int], None] | None = None,
     ) -> CollectedData:
         """데이터 수집만 실행"""
         logger.info(f"데이터 수집 시작: {product.get('name', 'N/A')}")
@@ -429,7 +431,7 @@ class PipelineService:
             raise PipelineError(
                 f"데이터 수집 실패: {e}",
                 original_error=e,
-            )
+            ) from e
 
     def _upload_to_gcs(
         self,

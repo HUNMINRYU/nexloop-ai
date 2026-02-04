@@ -105,9 +105,7 @@ class GCSStorage:
                     json.dumps(data, ensure_ascii=False, indent=2),
                     content_type=content_type,
                 )
-            elif isinstance(data, str):
-                blob.upload_from_string(data, content_type=content_type)
-            elif isinstance(data, bytes):
+            elif isinstance(data, (str, bytes)):
                 blob.upload_from_string(data, content_type=content_type)
             else:
                 raise ValueError(f"지원하지 않는 데이터 타입: {type(data)}")
@@ -117,7 +115,7 @@ class GCSStorage:
 
         except Exception as e:
             logger.error(f"GCS 업로드 실패: {e}")
-            raise GCSUploadError(f"GCS 업로드 실패: {e}", path=path)
+            raise GCSUploadError(f"GCS 업로드 실패: {e}", path=path) from e
 
     def download(self, path: str) -> bytes | None:
         """바이너리 데이터 다운로드"""
@@ -127,7 +125,7 @@ class GCSStorage:
             return blob.download_as_bytes()
         except Exception as e:
             logger.error(f"GCS 다운로드 실패: {e}")
-            raise GCSDownloadError(f"GCS 다운로드 실패: {e}", path=path)
+            raise GCSDownloadError(f"GCS 다운로드 실패: {e}", path=path) from e
 
     def download_text(self, path: str) -> str | None:
         """텍스트 데이터 다운로드"""

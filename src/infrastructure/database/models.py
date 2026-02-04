@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import DateTime, Integer, String, Text, Boolean, func, ForeignKey
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -93,7 +93,9 @@ class PipelineSchedule(Base):
     # Cloud Scheduler 정보
     gcp_job_id: Mapped[str] = mapped_column(String(200), unique=True, nullable=False)
     cron_expression: Mapped[str] = mapped_column(String(100), nullable=False)
-    timezone: Mapped[str] = mapped_column(String(50), default="Asia/Seoul", nullable=False)
+    timezone: Mapped[str] = mapped_column(
+        String(50), default="Asia/Seoul", nullable=False
+    )
 
     # 파이프라인 설정
     product_name: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -156,10 +158,32 @@ class CTRFeedback(Base):
     predicted_ctr: Mapped[str] = mapped_column(String(20), nullable=False)
     actual_ctr: Mapped[str | None] = mapped_column(String(20), nullable=True)
     error: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    model_version: Mapped[str] = mapped_column(
-        String(50), default="v1", nullable=False
-    )
+    model_version: Mapped[str] = mapped_column(String(50), default="v1", nullable=False)
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=now_kst, nullable=False
+    )
+
+
+class BrandKit(Base):
+    """일관된 브랜드 정체성을 위한 브랜드 킷"""
+
+    __tablename__ = "brand_kits"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    primary_color: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    secondary_color: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    font_style: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    tone_and_voice: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    visual_vibes_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    logo_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=now_kst, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=now_kst,
+        onupdate=now_kst,
+        nullable=False,
     )
