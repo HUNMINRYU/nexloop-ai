@@ -15,6 +15,7 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+.ruff_cache/
 
 # Node
 node_modules/
@@ -29,6 +30,8 @@ node_modules/
 # AI Agent (개발 환경 전용)
 .claude/
 .agent/
+CLAUDE.md
+.cursorrules
 
 # Debug/Test files (로컬 전용)
 debug_*.py
