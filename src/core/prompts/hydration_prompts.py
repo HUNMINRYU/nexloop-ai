@@ -1,4 +1,5 @@
 """Hydration/댓글 분석 프롬프트 - 프로페셔널 프롬프트 엔지니어링 적용"""
+
 from __future__ import annotations
 
 from core.prompts import PromptTemplate, prompt_registry
@@ -11,43 +12,49 @@ You are an AI module specialized in extracting engagement signals from user-gene
 Your task is to quantify subjective textual data into structured, actionable metrics.
 
 ### 🎯 Objective
-Analyze the provided user comment and extract key engagement features as normalized scores (0.0 to 1.0).
-These scores will be used downstream for ranking, filtering, and strategic prioritization.
+Analyze the listed user comments and extract key engagement features for each, as normalized scores (0.0 to 1.0).
+Use the provided index to identify each comment in your response.
 
 ### 📋 Scoring Guidelines
-- **purchase_intent (0.0-1.0):** Does the user express interest in buying or using the product? 0.0 = No interest, 1.0 = High intent.
-- **reply_inducing (0.0-1.0):** Is this comment likely to generate discussion or replies? Controversial or question-based comments score higher.
-- **constructive_feedback (0.0-1.0):** Does this provide specific, detailed, and useful feedback? Generic praise/criticism scores low.
-- **sentiment_intensity (0.0-1.0):** How emotionally charged is the comment? Neutral = 0.2-0.4, Strongly positive/negative = 0.8-1.0.
-- **toxicity (0.0-1.0):** Is this spam, hate speech, or irrelevant noise? Higher = more toxic, should be filtered.
-- **dm_probability (0.0-1.0):** How likely is this comment to lead the author or reader to send a DM or inquiry? Questions about pricing, availability, or direct contact score higher.
-- **copy_link_probability (0.0-1.0):** How likely is someone to copy and share a link to this comment? Informative, surprising, or highly relatable comments score higher.
-- **profile_click (0.0-1.0):** How likely is a reader to click the commenter's profile? Authoritative, expert, or uniquely insightful comments score higher.
-- **bookmark_worthy (0.0-1.0):** How likely is a reader to bookmark or save this comment for later? Practical tips, reference material, or comprehensive answers score higher.
-- **keywords:** Extract 2-3 most relevant keywords that capture the essence of the comment.
+- **purchase_intent (0.0-1.0):** Does the user express interest in buying or using the product? 
+- **reply_inducing (0.0-1.0):** Is this comment likely to generate discussion or replies? 
+- **constructive_feedback (0.0-1.0):** Does this provide specific, detailed, and useful feedback? 
+- **sentiment_intensity (0.0-1.0):** How emotionally charged is the comment? 
+- **toxicity (0.0-1.0):** Is this spam, hate speech, or irrelevant noise? 
+- **dm_probability (0.0-1.0):** Likely to send DM?
+- **copy_link_probability (0.0-1.0):** Likely to share link?
+- **profile_click (0.0-1.0):** Likely to click profile?
+- **bookmark_worthy (0.0-1.0):** Likely to bookmark?
+- **keywords:** Extract 2-3 most relevant keywords.
 
 ---
 
 ## 📦 Input Data
-
-**Comment:**
-"{comment}"
+Analyze the following comments:
+{comments_with_index}
 
 ---
 
 ### 📤 Response Format (Strict JSON)
-Output ONLY the following JSON structure.
+Output ONLY a JSON object with a "results" key containing an array of results. Each item must have the "index" and its "features".
 {{
-    "purchase_intent": float,
-    "reply_inducing": float,
-    "constructive_feedback": float,
-    "sentiment_intensity": float,
-    "toxicity": float,
-    "dm_probability": float,
-    "copy_link_probability": float,
-    "profile_click": float,
-    "bookmark_worthy": float,
-    "keywords": ["keyword1", "keyword2", "keyword3"]
+    "results": [
+        {{
+            "index": int,
+            "features": {{
+                "purchase_intent": float,
+                "reply_inducing": float,
+                "constructive_feedback": float,
+                "sentiment_intensity": float,
+                "toxicity": float,
+                "dm_probability": float,
+                "copy_link_probability": float,
+                "profile_click": float,
+                "bookmark_worthy": float,
+                "keywords": ["keyword1", "keyword2"]
+            }}
+        }}
+    ]
 }}
 """.strip(),
 )
@@ -115,4 +122,4 @@ Output ONLY the following JSON structure. Ensure all text is in Korean (한국�
 prompt_registry.register(HYDRATION_FEATURE_PROMPT)
 prompt_registry.register(COMMENT_ANALYSIS_PROMPT)
 
-__all__ = ["HYDRATION_FEATURE_PROMPT", "COMMENT_ANALYSIS_PROMPT"]
+__all__ = ["COMMENT_ANALYSIS_PROMPT", "HYDRATION_FEATURE_PROMPT"]

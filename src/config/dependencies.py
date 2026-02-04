@@ -4,14 +4,15 @@ Dependency Injection Container
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
 from functools import cached_property
-from typing import TYPE_CHECKING, ClassVar, Iterator, Optional
+from typing import TYPE_CHECKING, ClassVar
 
 from config.settings import get_settings
 from core.interfaces.ai_service import IMarketingAIService
-from core.interfaces.chatbot import IChatbotService, IRAGClient
 from core.interfaces.api_client import INaverClient, IYouTubeClient
+from core.interfaces.chatbot import IChatbotService, IRAGClient
 from core.interfaces.services import (
     ICommentAnalysisService,
     ICTRPredictor,
@@ -32,13 +33,15 @@ from infrastructure.clients.naver_client import NaverClient
 from infrastructure.clients.veo_client import VeoClient
 from infrastructure.clients.youtube_client import YouTubeClient
 from infrastructure.storage.gcs_storage import GCSStorage
+from services.auth_service import AuthService
 from services.chatbot_service import ChatbotService
 from services.data_collection_service import DataCollectionService
 from services.history_service import HistoryService
-from services.marketing_service import MarketingService
 from services.market_trend_service import MarketTrendService
+from services.marketing_service import MarketingService
 from services.naver_service import NaverService
 from services.pipeline.orchestrator import PipelineOrchestrator
+from services.pipeline.stages.diversity_scorer import AuthorDiversityScorer
 from services.pipeline.stages.filter import QualityFilter
 from services.pipeline.stages.hydration import FeatureHydrator
 from services.pipeline.stages.scorer import EngagementScorer
@@ -49,35 +52,34 @@ from services.rag_ingestion_service import RagIngestionService
 from services.thumbnail_service import ThumbnailService
 from services.video_service import VideoService
 from services.youtube_service import YouTubeService
-from services.auth_service import AuthService
 
 if TYPE_CHECKING:
     from services.comment_analysis_service import CommentAnalysisService
     from services.ctr_predictor import CTRPredictor
     from services.export_service import ExportService
 from services.hook_service import HookService
-from services.social_service import SocialMediaService
 from services.insight_external_service import InsightExternalService
 from services.insight_report_service import InsightReportService
+from services.social_service import SocialMediaService
 
 
 class ServiceContainer:
     """서비스 컨테이너 (Singleton + Lazy Factory)"""
 
-    _instance: ClassVar[Optional["ServiceContainer"]] = None
+    _instance: ClassVar[ServiceContainer | None] = None
 
-    def __init__(self, settings=None, overrides: Optional[dict[str, object]] = None):
+    def __init__(self, settings=None, overrides: dict[str, object] | None = None):
         self._settings = settings or get_settings()
         self._overrides = overrides or {}
 
     @classmethod
-    def get_instance(cls) -> "ServiceContainer":
+    def get_instance(cls) -> ServiceContainer:
         if cls._instance is None:
             cls._instance = ServiceContainer()
         return cls._instance
 
     @classmethod
-    def set_instance(cls, instance: Optional["ServiceContainer"]) -> None:
+    def set_instance(cls, instance: ServiceContainer | None) -> None:
         cls._instance = instance
 
     def clear_cache(self) -> None:
@@ -113,7 +115,9 @@ class ServiceContainer:
         if value is None:
             return None
         if protocol and not isinstance(value, protocol):
-            raise TypeError(f"Override for {key} does not implement {protocol.__name__}")
+            raise TypeError(
+                f"Override for {key} does not implement {protocol.__name__}"
+            )
         return value
 
     # Clients
@@ -218,7 +222,7 @@ class ServiceContainer:
         return VideoService(client=self.veo_client)
 
     @cached_property
-    def hook_service(self) -> "HookService":
+    def hook_service(self) -> HookService:
         override = self._get_override("hook_service", IHookService)
         if override is not None:
             return override
@@ -227,7 +231,7 @@ class ServiceContainer:
         return HookService(gemini_client=self.gemini_client)
 
     @cached_property
-    def comment_analysis_service(self) -> "CommentAnalysisService":
+    def comment_analysis_service(self) -> CommentAnalysisService:
         override = self._get_override(
             "comment_analysis_service", ICommentAnalysisService
         )
@@ -238,7 +242,7 @@ class ServiceContainer:
         return CommentAnalysisService(gemini_client=self.gemini_client)
 
     @cached_property
-    def ctr_predictor(self) -> "CTRPredictor":
+    def ctr_predictor(self) -> CTRPredictor:
         override = self._get_override("ctr_predictor", ICTRPredictor)
         if override is not None:
             return override
@@ -247,7 +251,7 @@ class ServiceContainer:
         return CTRPredictor(gemini_client=self.gemini_client)
 
     @cached_property
-    def export_service(self) -> "ExportService":
+    def export_service(self) -> ExportService:
         override = self._get_override("export_service", IExportService)
         if override is not None:
             return override
@@ -276,6 +280,7 @@ class ServiceContainer:
             quality_filter=QualityFilter(),
             scorer=EngagementScorer(),
             selector=TopInsightSelector(),
+            diversity_scorer=AuthorDiversityScorer(),
         )
 
     @cached_property
@@ -350,7 +355,7 @@ def get_services() -> ServiceContainer:
 
 @contextmanager
 def override_services(
-    overrides: Optional[dict[str, object]] = None,
+    overrides: dict[str, object] | None = None,
     settings=None,
 ) -> Iterator[ServiceContainer]:
     """테스트/스크립트용 서비스 오버라이드 컨텍스트"""
